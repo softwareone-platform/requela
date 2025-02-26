@@ -1,0 +1,111 @@
+# The start rule - every parse begins here
+start: combined_expression
+
+# Multiple expressions combined with &
+combined_expression: single_expression ("&" single_expression)*
+
+# A single expression can be a filter, select, or order expression
+single_expression: expression
+                | order_expression
+
+# An expression can be either a logical operation, a comparison, or a grouped expression
+expression: logical_expression
+          | comparison
+          | any_expression
+          | grouped_expression
+
+# Order by expression for sorting
+order_expression: "order_by" "(" order_list ")"
+
+# List of fields to select/order, separated by commas
+order_list: order_item ("," order_item)*
+
+# Individual select/order items with optional sign
+order_item: [SIGN] property
+
+# Sign for inclusion/exclusion or ordering
+SIGN: "+" | "-"
+
+# Logical expressions handle AND, OR, NOT operations with their arguments
+logical_expression: logical_operator "(" argument_list ")"
+
+# Logical operators with priority 2 (higher than default)
+# Each operator is mapped to a specific name for the transformer
+logical_operator.2: "and" -> and_op
+                 | "or" -> or_op
+                 | "not" -> not_op
+
+# Comparison operators with priority 2
+# Each maps to a specific operation in SQLAlchemy
+comparison_operator.2: "eq" -> eq_op    # Equal
+                    | "ne" -> ne_op    # Not Equal
+                    | "gt" -> gt_op    # Greater Than
+                    | "gte" -> gte_op  # Greater Than or Equal
+                    | "lt" -> lt_op    # Less Than
+                    | "lte" -> lte_op  # Less Than or Equal
+                    | "in" -> in_op    # In list
+                    | "out" -> out_op  # Not In list
+                    | "like" -> like_op    # Like
+                    | "ilike" -> ilike_op  # Case-insensitive Like
+
+# A list of arguments for logical operations, separated by commas
+argument_list: argument ("," argument)*
+
+# An argument can be any of these types
+argument: comparison
+        | logical_expression
+        | any_expression
+        | grouped_expression
+        | literal
+        | property
+
+# Parenthesized expressions for grouping
+grouped_expression: "(" expression ")"
+
+# ANY operator for relationships
+any_expression: "any" "(" property "," (comparison | logical_expression) ")"
+
+# Basic comparison operation: operator(field, value)
+comparison: comparison_operator "(" property "," value ")"
+
+# Property refers to a model field
+property: PROP
+
+# Value can be a literal, property reference, or tuple
+value: literal
+     | tuple
+
+# Different types of literal values
+literal: BOOLEAN
+       | NULL_LITERAL
+       | EMPTY_LITERAL
+       | DATETIME
+       | DATE
+       | FLOAT
+       | INT
+       | UNQUOTED_VAL
+
+# Tuple of values for IN operations: (value1, value2, ...)
+tuple: "(" literal ("," literal)* ")"
+
+# Date and datetime terminals with higher priority
+DATETIME.3: /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/
+DATE.3: /\d{4}-\d{2}-\d{2}/
+
+# Integer and float terminals with higher priority than UNQUOTED_VAL
+FLOAT.2: /-?\d+\.\d+/
+INT.2: /-?\d+/
+
+# Terminal definitions
+BOOLEAN: "true" | "false"
+NULL_LITERAL.2: "null()"
+EMPTY_LITERAL.2: "empty()"
+PROP: /[a-zA-Z_][\w\-\.]*/  # Property names: letters, numbers, underscore, dash, dot
+
+# Unquoted value that can contain spaces, wildcards, and other special chars
+# Updated to include any symbol except parentheses
+UNQUOTED_VAL: /[^(),]+/
+
+# Import and ignore whitespace
+%import common.WS
+%ignore WS
