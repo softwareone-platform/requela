@@ -1,3 +1,5 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=softwareone-platform_requela&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=softwareone-platform_requela) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=softwareone-platform_requela&metric=coverage)](https://sonarcloud.io/summary/new_code?id=softwareone-platform_requela)
+
 ![ReQueLa](assets/requela_logo.png)
 
 # ReQueLa, your data assistant!
