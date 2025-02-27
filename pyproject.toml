@@ -22,17 +22,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]>=0.115.6",
     "lark>=1.2.2",
     "sqlalchemy[asyncio]>=2.0.37",
 ]
 
 [project.urls]
-Homepage = "https://github.com/ffaraone/sarql"
-Documentation = "https://github.com/ffaraone/sarql#readme"
-Repository = "https://github.com/ffaraone/sarql.git"
-Issues = "https://github.com/ffaraone/sarql/issues"
-Changelog = "https://github.com/ffaraone/sarql/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/softwareone-platform/requela"
+Documentation = "https://github.com/softwareone-platform/requela#readme"
+Repository = "https://github.com/softwareone-platform/requela.git"
 
 [build-system]
 requires = ["hatchling"]
@@ -89,14 +86,11 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 addopts = "--cov=requela --cov-report=term-missing --cov-report=html --cov-report=xml"
 cache_dir = ".cache/pytest"
-log_cli = true
-log_cli_level = "DEBUG"
 
 [tool.coverage.run]
 branch = true
 source = ["requela"]
 relative_files = true
-concurrency = ["thread", "greenlet"]
 
 [tool.coverage.report]
 show_missing = true
