@@ -51,7 +51,9 @@ c
 
 ## Usage
 
-### Query Builder (SQLAlchemy)
+### Query Builder
+
+#### SQLAlchemy
 
 ```python
 from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
@@ -64,8 +66,22 @@ statement = builder.build_query("and(eq(name,John),gt(age,30))&order_by(name,-ag
 
 with get_session() as session:
     result = session.execute(statement)
-    for row in result:
-        print(row)
+    for model in result:
+        print(model)
+```
+
+#### Django
+
+```python
+from requela.builders.django import DjangoQueryBuilder
+
+from app.models import MyModel
+
+builder = DjangoQueryBuilder(MyModel)
+result = builder.build_query("and(eq(name,John),gt(age,30))&order_by(name,-age)")
+
+for model in result:
+    print(model)
 ```
 
 ## License

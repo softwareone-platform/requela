@@ -99,8 +99,6 @@ class RQLTransformer(Transformer):
                 return None
             if value == "empty()":
                 return ""
-            # Convert * to % for SQL like/ilike
-            return value.replace("*", "%")
         return value
 
     def FLOAT(self, token):
