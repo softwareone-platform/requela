@@ -88,6 +88,7 @@ literal: BOOLEAN
 # Tuple of values for IN operations: (value1, value2, ...)
 tuple: "(" literal ("," literal)* ")"
 
+# Terminal definitions
 # Date and datetime terminals with higher priority
 DATETIME.3: /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/
 DATE.3: /\d{4}-\d{2}-\d{2}/
@@ -96,14 +97,19 @@ DATE.3: /\d{4}-\d{2}-\d{2}/
 FLOAT.2: /-?\d+\.\d+/
 INT.2: /-?\d+/
 
-# Terminal definitions
+# Boolean literals
 BOOLEAN: "true" | "false"
+
+# Null literal
 NULL_LITERAL.2: "null()"
+
+# Empty literal
 EMPTY_LITERAL.2: "empty()"
+
+# Property name
 PROP: /[a-zA-Z_][\w\-\.]*/  # Property names: letters, numbers, underscore, dash, dot
 
 # Unquoted value that can contain spaces, wildcards, and other special chars
-# Updated to include any symbol except parentheses
 UNQUOTED_VAL: /[^(),]+/
 
 # Import and ignore whitespace

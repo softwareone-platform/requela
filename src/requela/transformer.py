@@ -115,6 +115,9 @@ class RQLTransformer(Transformer):
     def DATE(self, token):
         return date.fromisoformat(token)
 
+    def UNQUOTED_VAL(self, token):
+        return str(token)
+
     def tuple(self, args):
         return tuple(args)
 
