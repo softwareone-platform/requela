@@ -2,11 +2,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 
-from django.db.models import Model, Q
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 from django.db.models.query import QuerySet
 
 from requela.builders.base import QueryBuilder
-from requela.dataclasses import FilterExpression, JoinExpression, OrderByExpression
+from requela.dataclasses import FilterExpression, OrderByExpression
 
 
 @dataclass
@@ -16,13 +17,30 @@ class PrefetchExpression:
 
 
 class DjangoQueryBuilder(QueryBuilder):
-    def __init__(self, model_class: Model):
-        super().__init__()
-        self.model_class: Model = model_class
-        self.joins: list[JoinExpression] = []
-
     def get_initial_query(self):
         return self.model_class.objects.all()
+
+    def get_field_type(self, field: str) -> type:
+        try:
+            django_field = self.model_class._meta.get_field(field)
+            if django_field.get_internal_type() == "CharField":
+                return str
+            elif django_field.get_internal_type() == "DateTimeField":
+                return datetime
+            elif django_field.get_internal_type() == "DateField":
+                return date
+            elif django_field.get_internal_type() == "IntegerField":
+                return int
+            elif django_field.get_internal_type() == "FloatField":
+                return float
+            elif django_field.get_internal_type() == "BooleanField":
+                return bool
+            else:
+                raise ValueError(f"Unsupported field type: {django_field.get_internal_type()}")
+        except FieldDoesNotExist:
+            raise AttributeError(
+                f"Field '{field}' not found in model '{self.model_class.__name__}'."
+            )
 
     def apply_and(self, *conditions: Q) -> Q:
         query = Q()
@@ -88,7 +106,8 @@ class DjangoQueryBuilder(QueryBuilder):
             return Q(**{f"{self.resolve_property(prop)}__icontains": value})
 
     def resolve_property(self, prop_path: str) -> str:
-        return prop_path.replace(".", "__")
+        prop = self.resolve_alias(prop_path)
+        return prop.replace(".", "__")
 
     def apply_any(self, relationship_name, condition: Q) -> PrefetchExpression:
         return PrefetchExpression(relationship_name, condition)

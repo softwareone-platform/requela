@@ -2,8 +2,8 @@ import pytest
 from django.db.models import Q
 
 from requela.builders.django import DjangoQueryBuilder
-from tests.builders.django.models import User
-from tests.builders.django.utils import assert_statements_equal
+from tests.django.models import User
+from tests.django.utils import assert_statements_equal
 
 
 @pytest.mark.parametrize(

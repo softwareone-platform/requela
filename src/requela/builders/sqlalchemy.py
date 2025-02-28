@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -19,13 +19,25 @@ from requela.dataclasses import FilterExpression, JoinExpression, OrderByExpress
 
 
 class SQLAlchemyQueryBuilder(QueryBuilder):
-    def __init__(self, model_class: DeclarativeBase):
-        super().__init__()
-        self.model_class: DeclarativeBase = model_class
+    def __init__(
+        self,
+        model_class: DeclarativeBase,
+        resolve_alias_callback: Callable | None = None,
+        validate_operator_and_field_callback: Callable | None = None,
+    ):
+        super().__init__(
+            model_class,
+            resolve_alias_callback=resolve_alias_callback,
+            validate_operator_and_field_callback=validate_operator_and_field_callback,
+        )
         self.joins: list[JoinExpression] = []
 
     def get_initial_query(self):
         return select(self.model_class)
+
+    def get_field_type(self, field: str) -> type:
+        field_type = getattr(self.model_class, field).property.columns[0].type.python_type
+        return field_type
 
     def apply_and(self, *conditions: ColumnExpressionArgument) -> ColumnElement:
         return and_(*conditions)
@@ -85,6 +97,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         return self.resolve_property(prop).ilike(sql_pattern)
 
     def resolve_property(self, prop_path: str) -> UnaryExpression:
+        prop_path = self.resolve_alias(prop_path)
         model = self.model_class
         parts = prop_path.split(".")
 
