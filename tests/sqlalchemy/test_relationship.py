@@ -2,8 +2,8 @@ from sqlalchemy import exists, select
 from sqlalchemy.orm import aliased
 
 from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
-from tests.builders.sqlalchemy.models import Account, User
-from tests.builders.sqlalchemy.utils import assert_statements_equal
+from tests.sqlalchemy.models import Account, User
+from tests.sqlalchemy.utils import assert_statements_equal
 
 
 def test_comparison_eq_many_to_one():

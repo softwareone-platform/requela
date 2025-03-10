@@ -4,14 +4,14 @@ from lark import Transformer
 
 from requela.dataclasses import (
     FilterExpression,
-    Operators,
+    OperatorFunctions,
     OrderByExpression,
     OrderField,
 )
 
 
 class RQLTransformer(Transformer):
-    def __init__(self, operators: Operators):
+    def __init__(self, operators: OperatorFunctions):
         super().__init__()
         self.operators = operators
 
@@ -76,7 +76,6 @@ class RQLTransformer(Transformer):
 
     def comparison(self, args):
         operator, prop, value = args
-        # check operator is allowed for property
         return FilterExpression(
             condition=operator(prop, value),
         )

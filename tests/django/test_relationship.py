@@ -1,8 +1,8 @@
 from django.db.models import Q
 
 from requela.builders.django import DjangoQueryBuilder
-from tests.builders.django.models import Account, User
-from tests.builders.django.utils import assert_statements_equal
+from tests.django.models import Account, User
+from tests.django.utils import assert_statements_equal
 
 
 def test_comparison_eq_many_to_one():

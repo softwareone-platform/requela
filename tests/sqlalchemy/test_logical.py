@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import and_, or_, select
 
 from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
-from tests.builders.sqlalchemy.models import User
-from tests.builders.sqlalchemy.utils import assert_statements_equal
+from tests.sqlalchemy.models import User
+from tests.sqlalchemy.utils import assert_statements_equal
 
 
 @pytest.mark.parametrize(

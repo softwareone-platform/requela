@@ -4,7 +4,7 @@ def pytest_sessionstart(session):
 
     settings.configure(
         INSTALLED_APPS=[
-            "tests.builders.django",
+            "tests.django",
         ],
         DATABASES={
             "default": {
