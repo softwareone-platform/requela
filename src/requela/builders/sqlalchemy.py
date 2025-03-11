@@ -24,11 +24,13 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         model_class: DeclarativeBase,
         resolve_alias_callback: Callable | None = None,
         validate_operator_and_field_callback: Callable | None = None,
+        validate_ordering_callback: Callable | None = None,
     ):
         super().__init__(
             model_class,
             resolve_alias_callback=resolve_alias_callback,
             validate_operator_and_field_callback=validate_operator_and_field_callback,
+            validate_ordering_callback=validate_ordering_callback,
         )
         self.joins: list[JoinExpression] = []
 

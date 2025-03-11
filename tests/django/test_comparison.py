@@ -283,3 +283,11 @@ def test_comparison_ilike(model, field, pattern, expected):
     query_string = f"ilike({field},{pattern})"
     stmt = builder.build_query(query_string)
     assert_statements_equal(stmt, expected)
+
+
+def test_with_initial_query():
+    builder = DjangoQueryBuilder(User)
+    initial = User.objects.filter(age__gt=25)
+    query_string = "eq(name,Ratatouille)"
+    stmt = builder.build_query(query_string, initial)
+    assert_statements_equal(stmt, User.objects.filter(age__gt=25, name="Ratatouille"))
