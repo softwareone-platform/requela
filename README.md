@@ -1,6 +1,7 @@
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=softwareone-platform_requela&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=softwareone-platform_requela) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=softwareone-platform_requela&metric=coverage)](https://sonarcloud.io/summary/new_code?id=softwareone-platform_requela)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=softwareone-platform_requela&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=softwareone-platform_requela) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=softwareone-platform_requela&metric=coverage)](https://sonarcloud.io/summary/new_code?id=softwareone-platform_requela) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/requela)](https://pypi.org/project/requela/)
 
-![ReQueLa](assets/requela_logo.png)
+
+![ReQueLa](https://raw.githubusercontent.com/softwareone-platform/requela/main/assets/requela_logo.png)
 
 # ReQueLa, your data assistant!
 
@@ -37,7 +38,6 @@ pip install requela
 | `order_by(field1,field2,...)` | Order By fields |
 
 ### Examples
-c
 * Filtering: `and(eq(name,John),gt(age,30))`
 * Navigation through relationships using dot notation: `eq(account.name,My Account)` to filter on a related field.
 * Filtering with ANY operator: `any(users,eq(users.name,John))`
@@ -51,7 +51,7 @@ c
 
 ## Usage
 
-### Query Builder
+### Use QueryBuilder directly
 
 #### SQLAlchemy
 
@@ -83,6 +83,48 @@ result = builder.build_query("and(eq(name,John),gt(age,30))&order_by(name,-age)"
 for model in result:
     print(model)
 ```
+
+### Create a ModelFilter class
+
+You can create a class to specify filtering and ordering rules for a given model like:
+
+```python
+from requela.filters import FieldDefinition, ModelFilter, Operator
+from tests.django.models import Account, User
+
+
+class AccountFilter(ModelFilter):
+    __model__ = Account
+
+    name = FieldDefinition()
+    description = FieldDefinition()
+    status = FieldDefinition()
+    balance = FieldDefinition()
+    created_at = FieldDefinition(
+        alias="events.created.at",
+    )
+
+
+class UserFilter(ModelFilter):
+    __model__ = User
+
+    name = FieldDefinition()
+    age = FieldDefinition()
+    role = FieldDefinition(
+        allowed_operators=[Operator.IN, Operator.OUT],
+    )
+    is_active = FieldDefinition(allow_ordering=False)
+    birth_date = FieldDefinition(
+        alias="events.born.at",
+    )
+    account = AccountFilter()
+
+    filters = UserFilter()
+    query = filters.build_query("and(eq(name,John),gt(age,30),eq(events.born.at,2024-01-01))&order_by(name,-age)")
+```
+
+
+
 
 ## License
 

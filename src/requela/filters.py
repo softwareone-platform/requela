@@ -49,11 +49,16 @@ class ModelFilter(metaclass=ModelFilterMeta):
         return field_name
 
     @classmethod
-    def _validate_operator_and_field(cls, field: str, operator: Operator) -> bool:
+    def _validate_operator_and_field(cls, field: str, operator: Operator):
         _, field_def = cls._get_field_by_alias(field)
         if operator not in field_def.allowed_operators:  # type: ignore
             raise ValueError(f"Operator '{operator.value}' is not allowed for field '{field}'.")
-        return True
+
+    @classmethod
+    def _validate_ordering(cls, field: str):
+        _, field_def = cls._get_field_by_alias(field)
+        if not field_def.allow_ordering:  # type: ignore
+            raise ValueError(f"Order by '{field}' is not allowed.")
 
     @classmethod
     def _get_builder(cls) -> QueryBuilder:
@@ -61,6 +66,7 @@ class ModelFilter(metaclass=ModelFilterMeta):
             cls.__model__,
             resolve_alias_callback=cls._resolve_alias,
             validate_operator_and_field_callback=cls._validate_operator_and_field,
+            validate_ordering_callback=cls._validate_ordering,
         )
 
     def _validate(self) -> None:

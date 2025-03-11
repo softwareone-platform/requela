@@ -20,10 +20,12 @@ class QueryBuilder(ABC):
         model_class: Any,
         resolve_alias_callback: Callable | None = None,
         validate_operator_and_field_callback: Callable | None = None,
+        validate_ordering_callback: Callable | None = None,
     ):
         self.model_class = model_class
         self.resolve_alias_callback = resolve_alias_callback
         self.validate_operator_and_field_callback = validate_operator_and_field_callback
+        self.validate_ordering_callback = validate_ordering_callback
         self.transformer = RQLTransformer(
             OperatorFunctions(
                 and_op=self.apply_and,
@@ -133,7 +135,7 @@ class QueryBuilder(ABC):
         return alias
 
     def build_query(self, rql_query: str, initial_query: Any = None) -> Any:
-        query = initial_query or self.get_initial_query()
+        query = initial_query if initial_query is not None else self.get_initial_query()
         ast = parse(rql_query)
         try:
             expressions = self.transformer.transform(ast)
@@ -143,5 +145,8 @@ class QueryBuilder(ABC):
             if isinstance(expression, FilterExpression):
                 query = self.apply_filter(query, expression)
             if isinstance(expression, OrderByExpression):
+                if self.validate_ordering_callback:
+                    for field in expression.fields:
+                        self.validate_ordering_callback(field.field_path)
                 query = self.apply_order_by(query, expression)
         return self.apply_joins(query)

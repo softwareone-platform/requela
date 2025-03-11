@@ -41,8 +41,8 @@ def test_invalid_operator_for_field():
 
 def test_valid_relationship():
     user_filter = UserFilter()
-    stmt = user_filter.build_query("eq(account.name,My Account)")
-    expected = User.objects.filter(account__name="My Account")
+    stmt = user_filter.build_query("eq(account.name,My Account)&order_by(name)")
+    expected = User.objects.filter(account__name="My Account").order_by("name")
     assert_statements_equal(stmt, expected)
 
 
@@ -80,3 +80,12 @@ def test_filter_class_unexisting_field():
 
     with pytest.raises(ValueError, match="Field 'banana' not found in model 'User'."):
         UserFilter()
+
+
+def test_filter_class_order_field_not_allowed():
+    class UserFilter(ModelFilter):
+        __model__ = User
+        name = FieldDefinition(allow_ordering=False)
+
+    with pytest.raises(ValueError, match="Order by 'name' is not allowed."):
+        UserFilter().build_query("order_by(name)")
