@@ -1,4 +1,4 @@
-from requela.rules import FieldRule, ModelRQLRules, Operator
+from requela.rules import FieldRule, ModelRQLRules, Operator, RelationshipRule
 from tests.django.models import Account, User
 
 
@@ -25,4 +25,7 @@ class UserRules(ModelRQLRules):
     birth_date = FieldRule(
         alias="events.born.at",
     )
-    account = AccountRules()
+    account = RelationshipRule(
+        alias="account",
+        rules=AccountRules(),
+    )

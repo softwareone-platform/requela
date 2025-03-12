@@ -6,8 +6,8 @@ from sqlalchemy.orm import aliased
 
 from requela.dataclasses import Operator
 from requela.rules import FieldRule, ModelRQLRules
-from tests.sqlalchemy.models import Account, User
-from tests.sqlalchemy.rules import UserRules
+from tests.sqlalchemy.models import Account, Actor, User
+from tests.sqlalchemy.rules import AccountRules, UserRules
 from tests.sqlalchemy.utils import assert_statements_equal
 
 
@@ -49,7 +49,7 @@ def test_valid_relationship():
     assert_statements_equal(stmt, expected)
 
 
-def test_valid_aliased_relationship():
+def test_valid_alias_on_relationship():
     user_filter = UserRules()
     stmt = user_filter.build_query("eq(account.events.created.at,2025-01-01T12:10:00+00:00)")
     alias = aliased(Account)
@@ -57,6 +57,18 @@ def test_valid_aliased_relationship():
         select(User)
         .join(alias)
         .filter(alias.created_at == datetime.fromisoformat("2025-01-01T12:10:00+00:00"))
+    )
+    assert_statements_equal(stmt, expected)
+
+
+def test_valid_aliased_relationship():
+    account_filter = AccountRules()
+    stmt = account_filter.build_query("eq(events.created.by.name,John Doe)")
+    alias = aliased(Actor)
+    expected = (
+        select(Account)
+        .join(alias, onclause=alias.id == Account.created_by_id)
+        .filter(alias.name == "John Doe")
     )
     assert_statements_equal(stmt, expected)
 

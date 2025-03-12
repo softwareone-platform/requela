@@ -89,7 +89,7 @@ for model in result:
 You can create a class to specify filtering and ordering rules for a given model like:
 
 ```python
-from requela import FieldRule, ModelRQLRules, Operator
+from requela import FieldRule, ModelRQLRules, Operator, RelationshipRules
 from tests.django.models import Account, User
 
 
@@ -117,7 +117,7 @@ class UserRules(ModelRQLRules):
     birth_date = FieldRule(
         alias="events.born.at",
     )
-    account = AccountRules()
+    account = RelationshipRules(rules=AccountRules())
 
     rules = UserRules()
     query = rules.build_query("and(eq(name,John),gt(age,30),eq(events.born.at,2024-01-01))&order_by(name,-age)")

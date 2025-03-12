@@ -1,6 +1,13 @@
 from requela.dataclasses import Operator
-from requela.rules import FieldRule, ModelRQLRules
-from tests.sqlalchemy.models import Account, User
+from requela.rules import FieldRule, ModelRQLRules, RelationshipRule
+from tests.sqlalchemy.models import Account, Actor, User
+
+
+class ActorRules(ModelRQLRules):
+    __model__ = Actor
+
+
+    name = FieldRule()
 
 
 class AccountRules(ModelRQLRules):
@@ -12,6 +19,10 @@ class AccountRules(ModelRQLRules):
     balance = FieldRule()
     created_at = FieldRule(
         alias="events.created.at",
+    )
+    created_by = RelationshipRule(
+        alias="events.created.by",
+        rules=ActorRules(),
     )
 
 
@@ -26,4 +37,7 @@ class UserRules(ModelRQLRules):
     birth_date = FieldRule(
         alias="events.born.at",
     )
-    account = AccountRules()
+    account = RelationshipRule(
+        alias="account",
+        rules=AccountRules(),
+    )

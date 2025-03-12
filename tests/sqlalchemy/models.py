@@ -30,6 +30,13 @@ class Tenant(Base):
     accounts: Mapped[list["Account"]] = relationship("Account", back_populates="tenant")
 
 
+class Actor(Base):
+    __tablename__ = "actors"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+
+
 class Account(Base):
     __tablename__ = "accounts"
 
@@ -39,6 +46,8 @@ class Account(Base):
     status: Mapped[AccountStatus] = mapped_column(SQLEnum(AccountStatus))
     balance: Mapped[float] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime)
+    created_by: Mapped[Actor] = relationship(Actor)
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("actors.id"))
     tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"))
     tenant: Mapped[Tenant] = relationship("Tenant", back_populates="accounts")
     users: Mapped[list["User"]] = relationship("User", back_populates="account")

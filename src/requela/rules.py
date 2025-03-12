@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, ClassVar
@@ -11,6 +13,12 @@ class FieldRule:
     allowed_operators: set[Operator] | None = None
     alias: str | None = None
     allow_ordering: bool = True
+
+
+@dataclass
+class RelationshipRule:
+    alias: str
+    rules: ModelRQLRules
 
 
 class ModelRQLRulesMeta(type):
@@ -27,7 +35,7 @@ class ModelRQLRulesMeta(type):
         for key, value in namespace.items():
             if isinstance(value, FieldRule):
                 fields[key] = value
-            elif isinstance(value, ModelRQLRules):
+            elif isinstance(value, RelationshipRule):
                 relations[key] = value
 
         namespace["_fields"] = fields
@@ -38,7 +46,7 @@ class ModelRQLRulesMeta(type):
 class ModelRQLRules(metaclass=ModelRQLRulesMeta):
     __model__: ClassVar[Any]
     _fields: ClassVar[dict[str, FieldRule]]
-    _relations: ClassVar[dict[str, "ModelRQLRules"]]
+    _relations: ClassVar[dict[str, RelationshipRule]]
 
     def __init__(self):
         self.builder = self._get_builder()
@@ -137,6 +145,18 @@ class ModelRQLRules(metaclass=ModelRQLRulesMeta):
         return {op for op in operators if op not in valid_operators}  # type: ignore
 
     @classmethod
+    def _get_relation_by_alias(cls, alias: str) -> tuple[str, RelationshipRule]:
+        relations = {}
+        for relation_name, relation_def in cls._relations.items():
+            if alias.startswith(relation_def.alias):
+                relations[relation_name] = relation_def
+        if not relations:
+            raise ValueError(f"Relation with alias '{alias}' not found")
+        if len(relations) > 1:
+            raise ValueError(f"Multiple relations found for alias '{alias}'")
+        return list(relations.items())[0]
+
+    @classmethod
     def _get_field_by_alias(cls, alias: str) -> tuple[str, FieldRule]:
         """Gets a field definition by its alias or field name"""
         # First, check local fields
@@ -144,13 +164,12 @@ class ModelRQLRules(metaclass=ModelRQLRulesMeta):
             if field_def.alias == alias or field_name == alias:
                 return field_name, field_def
 
-        # Then, check relations
-        if "." in alias:
-            relation_name, nested_field = alias.split(".", 1)
-            if relation_name in cls._relations:
-                field_name, field_def = cls._relations[relation_name]._get_field_by_alias(
-                    nested_field
-                )
-                return f"{relation_name}.{field_name}", field_def
+
+        relation_name, relation_def = cls._get_relation_by_alias(alias)
+        field_to_search = alias.removeprefix(relation_def.alias)[1:]
+        field_name, field_def = relation_def.rules._get_field_by_alias(
+            field_to_search
+        )
+        return f"{relation_name}.{field_name}", field_def
 
         raise ValueError(f"Field with alias or name '{alias}' not found")
