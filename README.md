@@ -56,12 +56,12 @@ pip install requela
 #### SQLAlchemy
 
 ```python
-from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
+from requela import get_builder_for_model
 
 from app.db import get_session
 from app.models import MyModel
 
-builder = SQLAlchemyQueryBuilder(MyModel)
+builder = get_builder_for_model(MyModel)
 statement = builder.build_query("and(eq(name,John),gt(age,30))&order_by(name,-age)")
 
 with get_session() as session:
@@ -73,54 +73,54 @@ with get_session() as session:
 #### Django
 
 ```python
-from requela.builders.django import DjangoQueryBuilder
+from requela import get_builder_for_model
 
 from app.models import MyModel
 
-builder = DjangoQueryBuilder(MyModel)
+builder = get_builder_for_model(MyModel)
 result = builder.build_query("and(eq(name,John),gt(age,30))&order_by(name,-age)")
 
 for model in result:
     print(model)
 ```
 
-### Create a ModelFilter class
+### Create a ModelRQLRules class
 
 You can create a class to specify filtering and ordering rules for a given model like:
 
 ```python
-from requela.filters import FieldDefinition, ModelFilter, Operator
+from requela import FieldRule, ModelRQLRules, Operator
 from tests.django.models import Account, User
 
 
-class AccountFilter(ModelFilter):
+class AccountRules(ModelRQLRules):
     __model__ = Account
 
-    name = FieldDefinition()
-    description = FieldDefinition()
-    status = FieldDefinition()
-    balance = FieldDefinition()
-    created_at = FieldDefinition(
+    name = FieldRule()
+    description = FieldRule()
+    status = FieldRule()
+    balance = FieldRule()
+    created_at = FieldRule(
         alias="events.created.at",
     )
 
 
-class UserFilter(ModelFilter):
+class UserRules(ModelRQLRules):
     __model__ = User
 
-    name = FieldDefinition()
-    age = FieldDefinition()
-    role = FieldDefinition(
+    name = FieldRule()
+    age = FieldRule()
+    role = FieldRule(
         allowed_operators=[Operator.IN, Operator.OUT],
     )
-    is_active = FieldDefinition(allow_ordering=False)
-    birth_date = FieldDefinition(
+    is_active = FieldRule(allow_ordering=False)
+    birth_date = FieldRule(
         alias="events.born.at",
     )
-    account = AccountFilter()
+    account = AccountRules()
 
-    filters = UserFilter()
-    query = filters.build_query("and(eq(name,John),gt(age,30),eq(events.born.at,2024-01-01))&order_by(name,-age)")
+    rules = UserRules()
+    query = rules.build_query("and(eq(name,John),gt(age,30),eq(events.born.at,2024-01-01))&order_by(name,-age)")
 ```
 
 

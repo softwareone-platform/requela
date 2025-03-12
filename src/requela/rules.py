@@ -1,13 +1,21 @@
+from dataclasses import dataclass
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, ClassVar
 
 from requela.builders import QueryBuilder, get_builder_for_model
-from requela.dataclasses import DEFAULT_OPERATORS, FieldDefinition, Operator
+from requela.dataclasses import DEFAULT_OPERATORS, Operator
 
 
-class ModelFilterMeta(type):
+@dataclass
+class FieldRule:
+    allowed_operators: set[Operator] | None = None
+    alias: str | None = None
+    allow_ordering: bool = True
+
+
+class ModelRQLRulesMeta(type):
     def __new__(mcs, name, bases, namespace):
-        if name == "ModelFilter":
+        if name == "ModelRQLRules":
             return super().__new__(mcs, name, bases, namespace)
 
         if "__model__" not in namespace:
@@ -17,9 +25,9 @@ class ModelFilterMeta(type):
         relations = {}
 
         for key, value in namespace.items():
-            if isinstance(value, FieldDefinition):
+            if isinstance(value, FieldRule):
                 fields[key] = value
-            elif isinstance(value, ModelFilter):
+            elif isinstance(value, ModelRQLRules):
                 relations[key] = value
 
         namespace["_fields"] = fields
@@ -27,10 +35,10 @@ class ModelFilterMeta(type):
         return super().__new__(mcs, name, bases, namespace)
 
 
-class ModelFilter(metaclass=ModelFilterMeta):
+class ModelRQLRules(metaclass=ModelRQLRulesMeta):
     __model__: ClassVar[Any]
-    _fields: ClassVar[dict[str, FieldDefinition]]
-    _relations: ClassVar[dict[str, "ModelFilter"]]
+    _fields: ClassVar[dict[str, FieldRule]]
+    _relations: ClassVar[dict[str, "ModelRQLRules"]]
 
     def __init__(self):
         self.builder = self._get_builder()
@@ -129,7 +137,7 @@ class ModelFilter(metaclass=ModelFilterMeta):
         return {op for op in operators if op not in valid_operators}  # type: ignore
 
     @classmethod
-    def _get_field_by_alias(cls, alias: str) -> tuple[str, FieldDefinition]:
+    def _get_field_by_alias(cls, alias: str) -> tuple[str, FieldRule]:
         """Gets a field definition by its alias or field name"""
         # First, check local fields
         for field_name, field_def in cls._fields.items():
