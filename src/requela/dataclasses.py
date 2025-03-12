@@ -113,10 +113,3 @@ class OperatorFunctions:
 
     # any operator
     any_op: Callable
-
-
-@dataclass
-class FieldDefinition:
-    allowed_operators: set[Operator] | None = None
-    alias: str | None = None
-    allow_ordering: bool = True
