@@ -47,6 +47,20 @@ class ModelRQLRulesMeta(type):
                 elif isinstance(value, RelationshipRule) and key not in relations:
                     relations[key] = value
 
+        def collect_rules_from_bases(cls):
+            for key, value in vars(cls).items():
+                if isinstance(value, FieldRule) and key not in fields:
+                    fields[key] = value
+                elif isinstance(value, RelationshipRule) and key not in relations:
+                    relations[key] = value
+
+            for base in cls.__bases__:
+                collect_rules_from_bases(base)
+
+        # Start collecting from the direct bases
+        for base in bases:
+            collect_rules_from_bases(base)
+
         namespace["_fields"] = fields
         namespace["_relations"] = relations
         return super().__new__(mcs, name, bases, namespace)

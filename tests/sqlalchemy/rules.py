@@ -11,19 +11,25 @@ class ActorRules(NameMixin, ModelRQLRules):
     __model__ = Actor
 
 
-class AccountRules(ModelRQLRules, NameMixin):
+class TimestampMixin:
+    created_at = FieldRule(
+        alias="events.created.at",
+    )
+
+
+class AuditableMixin(TimestampMixin):
+    created_by = RelationshipRule(
+        alias="events.created.by",
+        rules=ActorRules(),
+    )
+
+
+class AccountRules(ModelRQLRules, AuditableMixin, NameMixin):
     __model__ = Account
 
     description = FieldRule()
     status = FieldRule()
     balance = FieldRule()
-    created_at = FieldRule(
-        alias="events.created.at",
-    )
-    created_by = RelationshipRule(
-        alias="events.created.by",
-        rules=ActorRules(),
-    )
 
 
 class UserRules(ModelRQLRules):
