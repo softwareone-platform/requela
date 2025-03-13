@@ -173,12 +173,7 @@ class ModelRQLRules(metaclass=ModelRQLRulesMeta):
             if field_def.alias == alias or field_name == alias:
                 return field_name, field_def
 
-
         relation_name, relation_def = cls._get_relation_by_alias(alias)
         field_to_search = alias.removeprefix(relation_def.alias)[1:]
-        field_name, field_def = relation_def.rules._get_field_by_alias(
-            field_to_search
-        )
+        field_name, field_def = relation_def.rules._get_field_by_alias(field_to_search)
         return f"{relation_name}.{field_name}", field_def
-
-        raise ValueError(f"Field with alias or name '{alias}' not found")

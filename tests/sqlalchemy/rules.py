@@ -11,8 +11,6 @@ class ActorRules(NameMixin, ModelRQLRules):
     __model__ = Actor
 
 
-
-
 class AccountRules(ModelRQLRules, NameMixin):
     __model__ = Account
 
