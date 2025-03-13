@@ -3,17 +3,19 @@ from requela.rules import FieldRule, ModelRQLRules, RelationshipRule
 from tests.sqlalchemy.models import Account, Actor, User
 
 
-class ActorRules(ModelRQLRules):
+class NameMixin:
+    name = FieldRule()
+
+
+class ActorRules(NameMixin, ModelRQLRules):
     __model__ = Actor
 
 
-    name = FieldRule()
 
 
-class AccountRules(ModelRQLRules):
+class AccountRules(ModelRQLRules, NameMixin):
     __model__ = Account
 
-    name = FieldRule()
     description = FieldRule()
     status = FieldRule()
     balance = FieldRule()

@@ -32,11 +32,20 @@ class ModelRQLRulesMeta(type):
         fields = {}
         relations = {}
 
+        # Collect fields and relations from the current class
         for key, value in namespace.items():
             if isinstance(value, FieldRule):
                 fields[key] = value
             elif isinstance(value, RelationshipRule):
                 relations[key] = value
+
+        # Collect fields and relations from base classes
+        for base in bases:
+            for key, value in vars(base).items():
+                if isinstance(value, FieldRule) and key not in fields:
+                    fields[key] = value
+                elif isinstance(value, RelationshipRule) and key not in relations:
+                    relations[key] = value
 
         namespace["_fields"] = fields
         namespace["_relations"] = relations
