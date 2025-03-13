@@ -20,6 +20,7 @@ class OrderField:
 class JoinExpression:
     target: Any
     on: Any
+    is_outer: bool = False
 
 
 @dataclass

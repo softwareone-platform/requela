@@ -23,6 +23,7 @@ classifiers = [
 
 dependencies = [
     "lark>=1.2.2",
+    "pytest-randomly>=3.16.0",
 ]
 
 [project.urls]

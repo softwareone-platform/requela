@@ -112,7 +112,12 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
                 alias = aliased(target_model)
 
                 if not relationship.property.uselist:
-                    self.joins.append(JoinExpression(target=alias, on=relationship))
+                    is_nullable = any(
+                        column.nullable for column in relationship.property.local_columns
+                    )
+                    self.joins.append(
+                        JoinExpression(target=alias, on=relationship, is_outer=is_nullable)
+                    )
                 current = alias
 
             return getattr(current, parts[-1])
@@ -147,7 +152,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
 
     def apply_joins(self, query: Query):
         for join_expr in self.joins:
-            query = query.join(join_expr.target, join_expr.on)
+            query = query.join(join_expr.target, join_expr.on, isouter=join_expr.is_outer)
         return query
 
     def apply_order_by(self, query: Query, order_by_expression: OrderByExpression) -> Query:
