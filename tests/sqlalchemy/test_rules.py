@@ -107,3 +107,21 @@ def test_filter_class_order_field_not_allowed():
 
     with pytest.raises(ValueError, match="Order by 'name' is not allowed."):
         UserRules().build_query("order_by(name)")
+
+
+def test_get_documentation():
+    docs = UserRules().get_documentation()
+    assert docs.split("\n") == [
+        "| Field | Operators | Order By |",
+        "|-------|-----------|----------|",
+        "|name|eq, ilike, in, like, ne, out|yes|",
+        "|role|in, out|yes|",
+        "|is_active|eq, ne|yes|",
+        "|events.born.at|eq, gt, gte, lt, lte, ne|yes|",
+        "|account.description|eq, ilike, in, like, ne, out|yes|",
+        "|account.status|eq, in, ne, out|yes|",
+        "|account.balance|eq, gt, gte, in, lt, lte, ne, out|yes|",
+        "|account.name|eq, ilike, in, like, ne, out|yes|",
+        "|account.events.created.at|eq, gt, gte, lt, lte, ne|yes|",
+        "|events.created.by.name|eq, ilike, in, like, ne, out|yes|",
+    ]

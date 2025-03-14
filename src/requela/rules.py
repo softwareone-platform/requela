@@ -7,6 +7,11 @@ from typing import Any, ClassVar
 from requela.builders import QueryBuilder, get_builder_for_model
 from requela.dataclasses import DEFAULT_OPERATORS, Operator
 
+DOCS_HEADER = [
+    "| Field | Operators | Order By |",
+    "|-------|-----------|----------|",
+]
+
 
 @dataclass
 class FieldRule:
@@ -81,6 +86,27 @@ class ModelRQLRules(metaclass=ModelRQLRulesMeta):
             rql_expression,
             initial_query=initial_query,
         )
+
+    def get_documentation(self) -> str:
+        """Returns the documentation for the rules"""
+        docs = DOCS_HEADER + self._get_fields_documentation()
+        return "\n".join(docs)
+
+    def _get_fields_documentation(self, alias_prefix: str = "") -> list[str]:
+        """Returns the documentation for the rules"""
+        docs = []
+        for field_name, field in self._fields.items():
+            operators = ", ".join(sorted([op.value for op in field.allowed_operators]))  # type: ignore
+            prefix = ""
+            if alias_prefix:
+                prefix = f"{alias_prefix}."
+            docs.append(
+                f"|{prefix}{field.alias or field_name}"
+                f"|{operators}|{'yes' if field.allow_ordering else 'no'}|"
+            )
+        for relation_name, relation in self._relations.items():
+            docs.extend(relation.rules._get_fields_documentation(relation.alias or relation_name))
+        return docs
 
     @classmethod
     def _resolve_alias(cls, alias: str) -> str:
