@@ -26,55 +26,30 @@ class RelationshipRule:
     rules: ModelRQLRules
 
 
-class ModelRQLRulesMeta(type):
-    def __new__(mcs, name, bases, namespace):
-        if name == "ModelRQLRules":
-            return super().__new__(mcs, name, bases, namespace)
+class ModelRQLRules:
+    __model__: ClassVar[Any]
+    _fields: ClassVar[dict[str, FieldRule]]
+    _relations: ClassVar[dict[str, RelationshipRule]]
 
-        if "__model__" not in namespace:
-            raise ValueError(f"{name} must define __model__")
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+
+        if not hasattr(cls, "__model__"):
+            raise TypeError(f"{cls.__name__} must define __model__")
 
         fields = {}
         relations = {}
 
-        # Collect fields and relations from the current class
-        for key, value in namespace.items():
-            if isinstance(value, FieldRule):
-                fields[key] = value
-            elif isinstance(value, RelationshipRule):
-                relations[key] = value
+        for attr_name in dir(cls):
+            attr_value = getattr(cls, attr_name)
 
-        # Collect fields and relations from base classes
-        for base in bases:
-            for key, value in vars(base).items():
-                if isinstance(value, FieldRule) and key not in fields:
-                    fields[key] = value
-                elif isinstance(value, RelationshipRule) and key not in relations:
-                    relations[key] = value
+            if isinstance(attr_value, FieldRule):
+                fields[attr_name] = attr_value
+            elif isinstance(attr_value, RelationshipRule):
+                relations[attr_name] = attr_value
 
-        def collect_rules_from_bases(cls):
-            for key, value in vars(cls).items():
-                if isinstance(value, FieldRule) and key not in fields:
-                    fields[key] = value
-                elif isinstance(value, RelationshipRule) and key not in relations:
-                    relations[key] = value
-
-            for base in cls.__bases__:
-                collect_rules_from_bases(base)
-
-        # Start collecting from the direct bases
-        for base in bases:
-            collect_rules_from_bases(base)
-
-        namespace["_fields"] = fields
-        namespace["_relations"] = relations
-        return super().__new__(mcs, name, bases, namespace)
-
-
-class ModelRQLRules(metaclass=ModelRQLRulesMeta):
-    __model__: ClassVar[Any]
-    _fields: ClassVar[dict[str, FieldRule]]
-    _relations: ClassVar[dict[str, RelationshipRule]]
+        cls._fields = fields
+        cls._relations = relations
 
     def __init__(self):
         self.builder = self._get_builder()
@@ -94,6 +69,7 @@ class ModelRQLRules(metaclass=ModelRQLRulesMeta):
 
     def _get_fields_documentation(self, alias_prefix: str = "") -> list[str]:
         """Returns the documentation for the rules"""
+
         docs = []
         for field_name, field in self._fields.items():
             operators = ", ".join(sorted([op.value for op in field.allowed_operators]))  # type: ignore
@@ -106,7 +82,7 @@ class ModelRQLRules(metaclass=ModelRQLRulesMeta):
             )
         for relation_name, relation in self._relations.items():
             docs.extend(relation.rules._get_fields_documentation(relation.alias or relation_name))
-        return docs
+        return sorted(docs)
 
     @classmethod
     def _resolve_alias(cls, alias: str) -> str:

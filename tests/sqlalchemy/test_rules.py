@@ -74,7 +74,7 @@ def test_valid_aliased_relationship():
 
 
 def test_filter_class_validation_no_model():
-    with pytest.raises(ValueError, match="UserRules must define __model__"):
+    with pytest.raises(TypeError, match="UserRules must define __model__"):
 
         class UserRules(ModelRQLRules):
             pass
@@ -114,14 +114,14 @@ def test_get_documentation():
     assert docs.split("\n") == [
         "| Field | Operators | Order By |",
         "|-------|-----------|----------|",
+        "|account.balance|eq, gt, gte, in, lt, lte, ne, out|yes|",
+        "|account.description|eq, ilike, in, like, ne, out|yes|",
+        "|account.events.created.at|eq, gt, gte, lt, lte, ne|yes|",
+        "|account.name|eq, ilike, in, like, ne, out|yes|",
+        "|account.status|eq, in, ne, out|yes|",
+        "|events.born.at|eq, gt, gte, lt, lte, ne|yes|",
+        "|events.created.by.name|eq, ilike, in, like, ne, out|yes|",
+        "|is_active|eq, ne|yes|",
         "|name|eq, ilike, in, like, ne, out|yes|",
         "|role|in, out|yes|",
-        "|is_active|eq, ne|yes|",
-        "|events.born.at|eq, gt, gte, lt, lte, ne|yes|",
-        "|account.description|eq, ilike, in, like, ne, out|yes|",
-        "|account.status|eq, in, ne, out|yes|",
-        "|account.balance|eq, gt, gte, in, lt, lte, ne, out|yes|",
-        "|account.name|eq, ilike, in, like, ne, out|yes|",
-        "|account.events.created.at|eq, gt, gte, lt, lte, ne|yes|",
-        "|events.created.by.name|eq, ilike, in, like, ne, out|yes|",
     ]

@@ -56,7 +56,7 @@ def test_valid_aliased_relationship():
 
 
 def test_filter_class_validation_no_model():
-    with pytest.raises(ValueError, match="UserRules must define __model__"):
+    with pytest.raises(TypeError, match="UserRules must define __model__"):
 
         class UserRules(ModelRQLRules):
             pass
