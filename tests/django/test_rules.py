@@ -67,10 +67,12 @@ def test_filter_class_invalid_operator_for_field():
         __model__ = User
         role = FieldRule(allowed_operators=[Operator.LTE, Operator.GTE])
 
-    with pytest.raises(
-        ValueError, match="Invalid operators 'gte', 'lte' for field 'role' of type 'str'."
-    ):
+    with pytest.raises(ExceptionGroup, match="Model validation failed for 'User'") as exc:
         UserRules()
+
+    assert [(e.__class__, str(e)) for e in exc.value.exceptions] == [
+        (ValueError, "Invalid operators 'gte', 'lte' for field 'role' of type 'str'."),
+    ]
 
 
 def test_filter_class_unexisting_field():
@@ -78,8 +80,27 @@ def test_filter_class_unexisting_field():
         __model__ = User
         banana = FieldRule()
 
-    with pytest.raises(ValueError, match="Field 'banana' not found in model 'User'."):
+    with pytest.raises(ExceptionGroup, match="Model validation failed for 'User'") as exc:
         UserRules()
+
+    assert [(e.__class__, str(e)) for e in exc.value.exceptions] == [
+        (ValueError, "Field 'banana' not found in model 'User'."),
+    ]
+
+
+def test_multiple_exceptions_raised():
+    class UserRules(ModelRQLRules):
+        __model__ = User
+        role = FieldRule(allowed_operators=[Operator.LTE, Operator.GTE])
+        banana = FieldRule()
+
+    with pytest.raises(ExceptionGroup, match="Model validation failed for 'User'") as exc:
+        UserRules()
+
+    assert [(e.__class__, str(e)) for e in exc.value.exceptions] == [
+        (ValueError, "Field 'banana' not found in model 'User'."),
+        (ValueError, "Invalid operators 'gte', 'lte' for field 'role' of type 'str'."),
+    ]
 
 
 def test_filter_class_order_field_not_allowed():
