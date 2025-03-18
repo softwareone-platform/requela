@@ -149,7 +149,10 @@ class ModelRQLRules:
                 )
 
         if errors:
-            raise ValueError("\n".join(errors))
+            raise ExceptionGroup(
+                f"Model validation failed for '{self.__model__.__name__}'",
+                [ValueError(error_msg) for error_msg in errors],
+            )
 
     def _get_field_type(self, field_name: str) -> type:
         """Gets the type of a field - to be implemented by specific ORM builders"""
