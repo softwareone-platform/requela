@@ -30,6 +30,7 @@ class AccountRules(ModelRQLRules, AuditableMixin, NameMixin):
     description = FieldRule()
     status = FieldRule()
     balance = FieldRule()
+    datasource_id = FieldRule()
 
 
 class UserRules(ModelRQLRules):

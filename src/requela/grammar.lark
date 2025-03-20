@@ -84,6 +84,7 @@ literal: BOOLEAN
        | FLOAT
        | INT
        | UNQUOTED_VAL
+       | UUID
 
 # Tuple of values for IN operations: (value1, value2, ...)
 tuple: "(" literal ("," literal)* ")"
@@ -108,6 +109,7 @@ EMPTY_LITERAL.2: "empty()"
 
 # Property name
 PROP: /[a-zA-Z_][\w\-\.]*/  # Property names: letters, numbers, underscore, dash, dot
+UUID.3: /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/ # increase priority to ensure that UUIDs are matched before generic PROP
 
 # Unquoted value that can contain spaces, wildcards, and other special chars
 UNQUOTED_VAL: /[^(),]+/

@@ -51,6 +51,7 @@ class Account(Base):
     tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"))
     tenant: Mapped[Tenant] = relationship("Tenant", back_populates="accounts")
     users: Mapped[list["User"]] = relationship("User", back_populates="account")
+    datasource_id: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
 class User(Base):
