@@ -16,10 +16,14 @@ def test_valid_field():
     stmt = user_filter.build_query("eq(name,Ratatouille 123)")
     assert_statements_equal(stmt, select(User).filter(User.name == "Ratatouille 123"))
 
+
 def test_with_uuid():
     myfilter = AccountRules()
     stmt = myfilter.build_query("eq(datasource_id,90575008-bdde-4a40-ab07-82be547674e6)")
-    assert_statements_equal(stmt, select(Account).filter(Account.datasource_id == "90575008-bdde-4a40-ab07-82be547674e6"))
+    assert_statements_equal(
+        stmt,
+        select(Account).filter(Account.datasource_id == "90575008-bdde-4a40-ab07-82be547674e6"),
+    )
 
 
 def test_valid_aliased_field():
