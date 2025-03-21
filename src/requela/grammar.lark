@@ -93,6 +93,7 @@ tuple: "(" literal ("," literal)* ")"
 # Date and datetime terminals with higher priority
 DATETIME.3: /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/
 DATE.3: /\d{4}-\d{2}-\d{2}/
+UUID.3: /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/ # increase priority to ensure that UUIDs are matched before generic PROP
 
 # Integer and float terminals with higher priority than UNQUOTED_VAL
 FLOAT.2: /-?\d+\.\d+/
@@ -109,7 +110,6 @@ EMPTY_LITERAL.2: "empty()"
 
 # Property name
 PROP: /[a-zA-Z_][\w\-\.]*/  # Property names: letters, numbers, underscore, dash, dot
-UUID.3: /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/ # increase priority to ensure that UUIDs are matched before generic PROP
 
 # Unquoted value that can contain spaces, wildcards, and other special chars
 UNQUOTED_VAL: /[^(),]+/
