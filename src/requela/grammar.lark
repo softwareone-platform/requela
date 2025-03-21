@@ -84,6 +84,7 @@ literal: BOOLEAN
        | FLOAT
        | INT
        | UNQUOTED_VAL
+       | UUID
 
 # Tuple of values for IN operations: (value1, value2, ...)
 tuple: "(" literal ("," literal)* ")"
@@ -92,6 +93,7 @@ tuple: "(" literal ("," literal)* ")"
 # Date and datetime terminals with higher priority
 DATETIME.3: /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/
 DATE.3: /\d{4}-\d{2}-\d{2}/
+UUID.3: /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/ # increase priority to ensure that UUIDs are matched before generic PROP
 
 # Integer and float terminals with higher priority than UNQUOTED_VAL
 FLOAT.2: /-?\d+\.\d+/

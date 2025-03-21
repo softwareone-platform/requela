@@ -17,6 +17,15 @@ def test_valid_field():
     assert_statements_equal(stmt, select(User).filter(User.name == "Ratatouille 123"))
 
 
+def test_with_uuid():
+    myfilter = AccountRules()
+    stmt = myfilter.build_query("eq(datasource_id,90575008-bdde-4a40-ab07-82be547674e6)")
+    assert_statements_equal(
+        stmt,
+        select(Account).filter(Account.datasource_id == "90575008-bdde-4a40-ab07-82be547674e6"),
+    )
+
+
 def test_valid_aliased_field():
     user_filter = UserRules()
     stmt = user_filter.build_query("eq(events.born.at,2024-01-01)")
@@ -132,10 +141,12 @@ def test_filter_class_order_field_not_allowed():
 
 def test_get_documentation():
     docs = UserRules().get_documentation()
+    print("DOCS:", docs)
     assert docs.split("\n") == [
         "| Field | Operators | Order By |",
         "|-------|-----------|----------|",
         "|account.balance|eq, gt, gte, in, lt, lte, ne, out|yes|",
+        "|account.datasource_id|eq, ilike, in, like, ne, out|yes|",
         "|account.description|eq, ilike, in, like, ne, out|yes|",
         "|account.events.created.at|eq, gt, gte, lt, lte, ne|yes|",
         "|account.name|eq, ilike, in, like, ne, out|yes|",
