@@ -22,8 +22,8 @@ class FieldRule:
 
 @dataclass
 class RelationshipRule:
-    alias: str
     rules: ModelRQLRules
+    alias: str | None = None
 
 
 class ModelRQLRules:
@@ -176,7 +176,9 @@ class ModelRQLRules:
     def _get_relation_by_alias(cls, alias: str) -> tuple[str, RelationshipRule]:
         relations = {}
         for relation_name, relation_def in cls._relations.items():
-            if alias.startswith(relation_def.alias):
+            relation_field_name = relation_def.alias or relation_name
+            print("relation_field_name", relation_field_name)
+            if alias.startswith(relation_field_name):
                 relations[relation_name] = relation_def
         if not relations:
             raise ValueError(f"Relation with alias '{alias}' not found")
@@ -193,6 +195,9 @@ class ModelRQLRules:
                 return field_name, field_def
 
         relation_name, relation_def = cls._get_relation_by_alias(alias)
-        field_to_search = alias.removeprefix(relation_def.alias)[1:]
+        relation_field_name = relation_def.alias or relation_name
+        if alias == relation_field_name:
+            return relation_name, relation_def
+        field_to_search = alias.removeprefix(relation_field_name)[1:] or relation_field_name
         field_name, field_def = relation_def.rules._get_field_by_alias(field_to_search)
         return f"{relation_name}.{field_name}", field_def
