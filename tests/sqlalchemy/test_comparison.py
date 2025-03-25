@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
-from tests.sqlalchemy.models import Account, User
+from tests.sqlalchemy.models import Account, User, ChargesFile
 from tests.sqlalchemy.utils import assert_statements_equal
 
 
@@ -294,3 +294,38 @@ def test_with_initial_query():
     query_string = "eq(name,Ratatouille)"
     stmt = builder.build_query(query_string, initial)
     assert_statements_equal(stmt, select(User).filter(User.age > 25, User.name == "Ratatouille"))
+
+
+def test_decimal_field():
+    builder = SQLAlchemyQueryBuilder(ChargesFile)
+    query_string = "eq(amount,100.40)"
+    stmt = builder.build_query(query_string)
+    assert_statements_equal(stmt, select(ChargesFile).filter(ChargesFile.amount == 100.40))
+
+
+def test_decimal_gt_field():
+    builder = SQLAlchemyQueryBuilder(ChargesFile)
+    query_string = "gt(amount,100.40)"
+    stmt = builder.build_query(query_string)
+    assert_statements_equal(stmt, select(ChargesFile).filter(ChargesFile.amount > 100.40))
+
+
+def test_decimal_gte_field():
+    builder = SQLAlchemyQueryBuilder(ChargesFile)
+    query_string = "gte(amount,100.40)"
+    stmt = builder.build_query(query_string)
+    assert_statements_equal(stmt, select(ChargesFile).filter(ChargesFile.amount >= 100.40))
+
+
+def test_decimal_lte_field():
+    builder = SQLAlchemyQueryBuilder(ChargesFile)
+    query_string = "lte(amount,100.40)"
+    stmt = builder.build_query(query_string)
+    assert_statements_equal(stmt, select(ChargesFile).filter(ChargesFile.amount <= 100.40))
+
+
+def test_decimal_lt_field():
+    builder = SQLAlchemyQueryBuilder(ChargesFile)
+    query_string = "lt(amount,100.40)"
+    stmt = builder.build_query(query_string)
+    assert_statements_equal(stmt, select(ChargesFile).filter(ChargesFile.amount < 100.40))

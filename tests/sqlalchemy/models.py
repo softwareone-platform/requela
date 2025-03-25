@@ -1,6 +1,8 @@
 import enum
 from datetime import date, datetime
+from decimal import Decimal
 
+import sqlalchemy as sa
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import Enum as SQLEnum
@@ -66,3 +68,10 @@ class User(Base):
     birth_date: Mapped[date] = mapped_column(Date)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     account: Mapped[Account] = relationship("Account", back_populates="users")
+
+
+class ChargesFile(Base):
+    __tablename__ = "invoices"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    amount: Mapped[Decimal | None] = mapped_column(sa.Numeric(18, 4), nullable=True)

@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Any
 
@@ -90,6 +91,16 @@ DEFAULT_OPERATORS = {
         Operator.LTE,
     },
     Enum: {Operator.EQ, Operator.NE, Operator.IN, Operator.OUT},
+    Decimal: {
+        Operator.EQ,
+        Operator.NE,
+        Operator.GT,
+        Operator.LT,
+        Operator.GTE,
+        Operator.LTE,
+        Operator.IN,
+        Operator.OUT,
+    },
 }
 
 
