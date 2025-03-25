@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
-from tests.sqlalchemy.models import Account, User, ChargesFile
+from tests.sqlalchemy.models import Account, ChargesFile, User
 from tests.sqlalchemy.utils import assert_statements_equal
 
 
