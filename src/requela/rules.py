@@ -81,7 +81,15 @@ class ModelRQLRules:
                 f"|{operators}|{'yes' if field.allow_ordering else 'no'}|"
             )
         for relation_name, relation in self._relations.items():
-            docs.extend(relation.rules._get_fields_documentation(relation.alias or relation_name))
+            prefix = ""
+            if alias_prefix:
+                prefix = f"{alias_prefix}."
+            docs.append(f"|{prefix}{relation.alias or relation_name}|eq, ne|no|")
+            docs.extend(
+                relation.rules._get_fields_documentation(
+                    f"{prefix}{relation.alias or relation_name}"
+                )
+            )
         return sorted(docs)
 
     @classmethod
@@ -92,7 +100,12 @@ class ModelRQLRules:
     @classmethod
     def _validate_operator_and_field(cls, field: str, operator: Operator):
         _, field_def = cls._get_field_by_alias(field)
-        if operator not in field_def.allowed_operators:  # type: ignore
+        allowed_operators = (
+            field_def.allowed_operators
+            if isinstance(field_def, FieldRule)
+            else {Operator.EQ, Operator.NE}
+        )
+        if operator not in allowed_operators:  # type: ignore
             raise ValueError(f"Operator '{operator.value}' is not allowed for field '{field}'.")
 
     @classmethod
@@ -186,7 +199,7 @@ class ModelRQLRules:
         return list(relations.items())[0]
 
     @classmethod
-    def _get_field_by_alias(cls, alias: str) -> tuple[str, FieldRule]:
+    def _get_field_by_alias(cls, alias: str) -> tuple[str, FieldRule | RelationshipRule]:
         """Gets a field definition by its alias or field name"""
         # First, check local fields
         for field_name, field_def in cls._fields.items():
@@ -198,5 +211,5 @@ class ModelRQLRules:
         if alias == relation_field_name:
             return relation_name, relation_def
         field_to_search = alias.removeprefix(relation_field_name)[1:] or relation_field_name
-        field_name, field_def = relation_def.rules._get_field_by_alias(field_to_search)
-        return f"{relation_name}.{field_name}", field_def
+        f_name, f_def = relation_def.rules._get_field_by_alias(field_to_search)
+        return f"{relation_name}.{f_name}", f_def

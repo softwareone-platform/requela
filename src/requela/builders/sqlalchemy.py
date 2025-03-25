@@ -12,7 +12,7 @@ from sqlalchemy import (
     or_,
     select,
 )
-from sqlalchemy.orm import DeclarativeBase, Query, aliased
+from sqlalchemy.orm import DeclarativeBase, Query, RelationshipProperty, aliased
 
 from requela.builders.base import QueryBuilder
 from requela.dataclasses import FilterExpression, JoinExpression, OrderByExpression
@@ -53,16 +53,43 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
     def apply_eq(
         self, prop: str, value: str | bool | date | datetime | int | float | None
     ) -> ColumnExpressionArgument:
+        model_field = self.resolve_property(prop)
+        if isinstance(model_field.property, RelationshipProperty):
+            if value is not None:
+                raise ValueError("`eq` can be applied to relationship only to test for null.")
+            return self.apply_eq_to_relationship(model_field.property)
+
         if value is True or value is False or value is None:
-            return self.resolve_property(prop).is_(value)
-        return self.resolve_property(prop) == value
+            return model_field.is_(value)
+        return model_field == value
+
+    def apply_eq_to_relationship(
+        self, relationship_property: RelationshipProperty
+    ) -> ColumnExpressionArgument:
+        conditions = []
+        for local_col in relationship_property.local_columns:
+            conditions.append(local_col.is_(None))
+        return and_(*conditions)
 
     def apply_ne(
         self, prop: str, value: str | bool | date | datetime | int | float | None
     ) -> ColumnExpressionArgument:
+        model_field = self.resolve_property(prop)
+        if isinstance(model_field.property, RelationshipProperty):
+            if value is not None:
+                raise ValueError("`ne` can be applied to relationship only to test for null.")
+            return self.apply_ne_to_relationship(model_field.property)
         if value is True or value is False or value is None:
-            return self.resolve_property(prop).isnot(value)
-        return self.resolve_property(prop) != value
+            return model_field.isnot(value)
+        return model_field != value
+
+    def apply_ne_to_relationship(
+        self, relationship_property: RelationshipProperty
+    ) -> ColumnExpressionArgument:
+        conditions = []
+        for local_col in relationship_property.local_columns:
+            conditions.append(local_col.isnot(None))
+        return or_(*conditions)
 
     def apply_gt(self, prop: str, value: date | datetime | int | float) -> ColumnExpressionArgument:
         return self.resolve_property(prop) > value

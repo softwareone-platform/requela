@@ -50,7 +50,7 @@ class Account(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime)
     created_by: Mapped[Actor] = relationship(Actor)
     created_by_id: Mapped[int] = mapped_column(ForeignKey("actors.id"))
-    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"))
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id"), nullable=True)
     tenant: Mapped[Tenant] = relationship("Tenant", back_populates="accounts")
     users: Mapped[list["User"]] = relationship("User", back_populates="account")
     datasource_id: Mapped[str] = mapped_column(String(255), nullable=False)

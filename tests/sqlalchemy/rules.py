@@ -1,6 +1,6 @@
 from requela.dataclasses import Operator
 from requela.rules import FieldRule, ModelRQLRules, RelationshipRule
-from tests.sqlalchemy.models import Account, Actor, User
+from tests.sqlalchemy.models import Account, Actor, Tenant, User
 
 
 class NameMixin:
@@ -24,6 +24,12 @@ class AuditableMixin(TimestampMixin):
     )
 
 
+class TenantRules(ModelRQLRules):
+    __model__ = Tenant
+
+    name = FieldRule()
+
+
 class AccountRules(ModelRQLRules, AuditableMixin, NameMixin):
     __model__ = Account
 
@@ -31,6 +37,7 @@ class AccountRules(ModelRQLRules, AuditableMixin, NameMixin):
     status = FieldRule()
     balance = FieldRule()
     datasource_id = FieldRule()
+    tenant = RelationshipRule(rules=TenantRules())
 
 
 class UserRules(ModelRQLRules):
