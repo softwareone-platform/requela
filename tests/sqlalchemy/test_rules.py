@@ -141,7 +141,6 @@ def test_filter_class_order_field_not_allowed():
 
 def test_get_documentation():
     docs = UserRules().get_documentation()
-    print("DOCS:", docs)
     assert docs.split("\n") == [
         "| Field | Operators | Order By |",
         "|-------|-----------|----------|",

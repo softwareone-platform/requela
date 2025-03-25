@@ -177,7 +177,6 @@ class ModelRQLRules:
         relations = {}
         for relation_name, relation_def in cls._relations.items():
             relation_field_name = relation_def.alias or relation_name
-            print("relation_field_name", relation_field_name)
             if alias.startswith(relation_field_name):
                 relations[relation_name] = relation_def
         if not relations:
