@@ -45,6 +45,5 @@ class UserRules(ModelRQLRules):
         alias="events.born.at",
     )
     account = RelationshipRule(
-        alias="account",
         rules=AccountRules(),
     )
