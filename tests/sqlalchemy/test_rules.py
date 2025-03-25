@@ -148,11 +148,43 @@ def test_get_documentation():
         "|account.datasource_id|eq, ilike, in, like, ne, out|yes|",
         "|account.description|eq, ilike, in, like, ne, out|yes|",
         "|account.events.created.at|eq, gt, gte, lt, lte, ne|yes|",
+        "|account.events.created.by.name|eq, ilike, in, like, ne, out|yes|",
+        "|account.events.created.by|eq, ne|no|",
         "|account.name|eq, ilike, in, like, ne, out|yes|",
         "|account.status|eq, in, ne, out|yes|",
+        "|account.tenant.name|eq, ilike, in, like, ne, out|yes|",
+        "|account.tenant|eq, ne|no|",
+        "|account|eq, ne|no|",
         "|events.born.at|eq, gt, gte, lt, lte, ne|yes|",
-        "|events.created.by.name|eq, ilike, in, like, ne, out|yes|",
         "|is_active|eq, ne|yes|",
         "|name|eq, ilike, in, like, ne, out|yes|",
         "|role|in, out|yes|",
     ]
+
+
+def test_tenant_relationship_eq_null():
+    account_rules = AccountRules()
+    stmt = account_rules.build_query("eq(tenant,null())")
+    assert_statements_equal(stmt, select(Account).filter(Account.tenant_id.is_(None)))
+
+
+def test_tenant_relationship_eq_invalid_value():
+    account_rules = AccountRules()
+    with pytest.raises(
+        ValueError, match="`eq` can be applied to relationship only to test for null."
+    ):
+        account_rules.build_query("eq(tenant,3)")
+
+
+def test_tenant_relationship_ne_null():
+    account_rules = AccountRules()
+    stmt = account_rules.build_query("ne(tenant,null())")
+    assert_statements_equal(stmt, select(Account).filter(Account.tenant_id.isnot(None)))
+
+
+def test_tenant_relationship_ne_invalid_value():
+    account_rules = AccountRules()
+    with pytest.raises(
+        ValueError, match="`ne` can be applied to relationship only to test for null."
+    ):
+        account_rules.build_query("ne(tenant,pip)")
