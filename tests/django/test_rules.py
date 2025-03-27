@@ -3,6 +3,7 @@ from datetime import date, datetime
 import pytest
 
 from requela.dataclasses import Operator
+from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules
 from tests.django.models import User
 from tests.django.rules import UserRules
@@ -23,19 +24,19 @@ def test_valid_aliased_field():
 
 def test_invalid_field():
     user_filter = UserRules()
-    with pytest.raises(ValueError):
+    with pytest.raises(RequelaError):
         user_filter.build_query("eq(email,fail@example.com)")
 
 
 def test_invalid_field_with_dot_notation():
     user_filter = UserRules()
-    with pytest.raises(ValueError):
+    with pytest.raises(RequelaError):
         user_filter.build_query("eq(norelationship.email,fail@example.com)")
 
 
 def test_invalid_operator_for_field():
     user_filter = UserRules()
-    with pytest.raises(ValueError, match="Operator 'eq' is not allowed for field 'role'."):
+    with pytest.raises(RequelaError, match="Operator 'eq' is not allowed for field 'role'."):
         user_filter.build_query("eq(role,admin)")
 
 
@@ -108,5 +109,5 @@ def test_filter_class_order_field_not_allowed():
         __model__ = User
         name = FieldRule(allow_ordering=False)
 
-    with pytest.raises(ValueError, match="Order by 'name' is not allowed."):
+    with pytest.raises(RequelaError, match="Order by 'name' is not allowed."):
         UserRules().build_query("order_by(name)")

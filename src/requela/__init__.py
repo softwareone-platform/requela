@@ -1,5 +1,6 @@
 from requela.builders import QueryBuilder, get_builder_for_model
 from requela.dataclasses import Operator
+from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules, RelationshipRule
 
 __all__ = [
@@ -9,4 +10,5 @@ __all__ = [
     "QueryBuilder",
     "get_builder_for_model",
     "RelationshipRule",
+    "RequelaError",
 ]

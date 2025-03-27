@@ -1,0 +1,2 @@
+class RequelaError(Exception):
+    pass

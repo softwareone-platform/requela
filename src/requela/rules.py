@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 
 from requela.builders import QueryBuilder, get_builder_for_model
 from requela.dataclasses import DEFAULT_OPERATORS, Operator
+from requela.exceptions import RequelaError
 
 DOCS_HEADER = [
     "| Field | Operators | Order By |",
@@ -57,10 +58,13 @@ class ModelRQLRules:
 
     def build_query(self, rql_expression: str, initial_query: Any = None) -> Any:
         """Builds the query using the configured builder"""
-        return self.builder.build_query(
-            rql_expression,
-            initial_query=initial_query,
-        )
+        try:
+            return self.builder.build_query(
+                rql_expression,
+                initial_query=initial_query,
+            )
+        except (ValueError, TypeError, AttributeError) as e:
+            raise RequelaError(str(e)) from e
 
     def get_documentation(self) -> str:
         """Returns the documentation for the rules"""

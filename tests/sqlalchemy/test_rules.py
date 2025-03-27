@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import aliased
 
 from requela.dataclasses import Operator
+from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules
 from tests.sqlalchemy.models import Account, Actor, User
 from tests.sqlalchemy.rules import AccountRules, UserRules
@@ -34,19 +35,19 @@ def test_valid_aliased_field():
 
 def test_invalid_field():
     user_filter = UserRules()
-    with pytest.raises(ValueError):
+    with pytest.raises(RequelaError):
         user_filter.build_query("eq(email,fail@example.com)")
 
 
 def test_invalid_field_with_dot_notation():
     user_filter = UserRules()
-    with pytest.raises(ValueError):
+    with pytest.raises(RequelaError):
         user_filter.build_query("eq(norelationship.email,fail@example.com)")
 
 
 def test_invalid_operator_for_field():
     user_filter = UserRules()
-    with pytest.raises(ValueError, match="Operator 'eq' is not allowed for field 'role'."):
+    with pytest.raises(RequelaError, match="Operator 'eq' is not allowed for field 'role'."):
         user_filter.build_query("eq(role,admin)")
 
 
@@ -135,7 +136,7 @@ def test_filter_class_order_field_not_allowed():
         __model__ = User
         name = FieldRule(allow_ordering=False)
 
-    with pytest.raises(ValueError, match="Order by 'name' is not allowed."):
+    with pytest.raises(RequelaError, match="Order by 'name' is not allowed."):
         UserRules().build_query("order_by(name)")
 
 
@@ -171,7 +172,7 @@ def test_tenant_relationship_eq_null():
 def test_tenant_relationship_eq_invalid_value():
     account_rules = AccountRules()
     with pytest.raises(
-        ValueError, match="`eq` can be applied to relationship only to test for null."
+        RequelaError, match="`eq` can be applied to relationship only to test for null."
     ):
         account_rules.build_query("eq(tenant,3)")
 
@@ -185,6 +186,6 @@ def test_tenant_relationship_ne_null():
 def test_tenant_relationship_ne_invalid_value():
     account_rules = AccountRules()
     with pytest.raises(
-        ValueError, match="`ne` can be applied to relationship only to test for null."
+        RequelaError, match="`ne` can be applied to relationship only to test for null."
     ):
         account_rules.build_query("ne(tenant,pip)")
