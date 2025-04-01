@@ -1,5 +1,7 @@
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     BooleanClauseList,
@@ -61,7 +63,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
 
         if value is True or value is False or value is None:
             return model_field.is_(value)
-        return model_field == value
+        return model_field == self.cast_value(model_field, value)
 
     def apply_eq_to_relationship(
         self, relationship_property: RelationshipProperty
@@ -81,7 +83,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
             return self.apply_ne_to_relationship(model_field.property)
         if value is True or value is False or value is None:
             return model_field.isnot(value)
-        return model_field != value
+        return model_field != self.cast_value(model_field, value)
 
     def apply_ne_to_relationship(
         self, relationship_property: RelationshipProperty
@@ -92,30 +94,34 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         return or_(*conditions)
 
     def apply_gt(self, prop: str, value: date | datetime | int | float) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) > value
+        return self.resolve_property(prop) > self.cast_value(self.resolve_property(prop), value)
 
     def apply_lt(self, prop: str, value: date | datetime | int | float) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) < value
+        return self.resolve_property(prop) < self.cast_value(self.resolve_property(prop), value)
 
     def apply_gte(
         self, prop: str, value: date | datetime | int | float
     ) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) >= value
+        return self.resolve_property(prop) >= self.cast_value(self.resolve_property(prop), value)
 
     def apply_lte(
         self, prop: str, value: date | datetime | int | float
     ) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) <= value
+        return self.resolve_property(prop) <= self.cast_value(self.resolve_property(prop), value)
 
     def apply_in(
         self, prop: str, value: Sequence[str] | Sequence[float] | Sequence[int]
     ) -> ColumnExpressionArgument:
-        return self.resolve_property(prop).in_(value)
+        return self.resolve_property(prop).in_(
+            [self.cast_value(self.resolve_property(prop), item) for item in value]
+        )
 
     def apply_out(
         self, prop: str, value: Sequence[str] | Sequence[float] | Sequence[int]
     ) -> ColumnExpressionArgument:
-        return self.resolve_property(prop).not_in(value)
+        return self.resolve_property(prop).not_in(
+            [self.cast_value(self.resolve_property(prop), item) for item in value]
+        )
 
     def apply_like(self, prop: str, value: str) -> ColumnExpressionArgument:
         sql_pattern = value.replace("*", "%")
@@ -166,6 +172,26 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
             self._adapt_condition(condition, alias),
         )
         return exists_clause
+
+    def cast_value(self, column: ColumnElement, value: Any) -> Any:  # pragma: no cover
+        try:
+            if column.type.python_type is str and not isinstance(value, str):
+                return str(value)
+            if column.type.python_type is bool and not isinstance(value, bool):
+                return bool(value)
+            if column.type.python_type is int and not isinstance(value, int):
+                return int(value)
+            if column.type.python_type is float and not isinstance(value, float):
+                return float(value)
+            if column.type.python_type is Decimal and not isinstance(value, Decimal):
+                return Decimal(value)
+            if column.type.python_type is datetime and not isinstance(value, datetime):
+                return datetime.fromisoformat(value)
+            if column.type.python_type is date and not isinstance(value, date):
+                return date.fromisoformat(value)
+            return value
+        except Exception:
+            raise ValueError(f"Cannot cast value {value} to {column.type.python_type}")
 
     def _adapt_condition(self, condition, alias):
         if isinstance(condition, BooleanClauseList):

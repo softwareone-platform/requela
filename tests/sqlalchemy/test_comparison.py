@@ -14,6 +14,7 @@ from tests.sqlalchemy.utils import assert_statements_equal
     [
         (User, "name", "Ratatouille 123", select(User).filter(User.name == "Ratatouille 123")),
         (User, "age", 25, select(User).filter(User.age == 25)),
+        (Account, "name", 25, select(Account).filter(Account.name == "25")),
         (Account, "balance", 25.13, select(Account).filter(Account.balance == 25.13)),
         (Account, "balance", -71.14, select(Account).filter(Account.balance == -71.14)),
         (Account, "balance", 33, select(Account).filter(Account.balance == 33)),
@@ -50,6 +51,7 @@ def test_comparison_eq(model, field, value, expected):
     [
         (User, "name", "Ratatouille", select(User).filter(User.name != "Ratatouille")),
         (User, "age", 25, select(User).filter(User.age != 25)),
+        (Account, "name", 25, select(Account).filter(Account.name != "25")),
         (Account, "balance", 25.13, select(Account).filter(Account.balance != 25.13)),
         (Account, "balance", -71.14, select(Account).filter(Account.balance != -71.14)),
         (Account, "balance", 33, select(Account).filter(Account.balance != 33)),
