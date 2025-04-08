@@ -1,6 +1,7 @@
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Any
 
 from sqlalchemy import (
@@ -174,24 +175,27 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         return exists_clause
 
     def cast_value(self, column: ColumnElement, value: Any) -> Any:  # pragma: no cover
-        try:
-            if column.type.python_type is str and not isinstance(value, str):
-                return str(value)
-            if column.type.python_type is bool and not isinstance(value, bool):
-                return bool(value)
-            if column.type.python_type is int and not isinstance(value, int):
-                return int(value)
-            if column.type.python_type is float and not isinstance(value, float):
-                return float(value)
-            if column.type.python_type is Decimal and not isinstance(value, Decimal):
-                return Decimal(value)
-            if column.type.python_type is datetime and not isinstance(value, datetime):
-                return datetime.fromisoformat(value)
-            if column.type.python_type is date and not isinstance(value, date):
-                return date.fromisoformat(value)
+        if isinstance(value, column.type.python_type):
             return value
-        except Exception:
-            raise ValueError(f"Cannot cast value {value} to {column.type.python_type}")
+        try:
+            if column.type.python_type is str:
+                return str(value)
+            if column.type.python_type is bool:
+                return bool(value)
+            if column.type.python_type is int:
+                return int(value)
+            if column.type.python_type is float:
+                return float(value)
+            if column.type.python_type is Decimal:
+                return Decimal(value)
+            if column.type.python_type is datetime:
+                return datetime.fromisoformat(value)
+            if column.type.python_type is date:
+                return date.fromisoformat(value)
+            if issubclass(column.type.python_type, Enum):
+                return column.type.python_type(value)
+        except Exception as e:
+            raise ValueError(f"Cannot cast value {value} to {column.type.python_type}: {e}") from e
 
     def _adapt_condition(self, condition, alias):
         if isinstance(condition, BooleanClauseList):
