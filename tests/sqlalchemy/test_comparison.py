@@ -13,6 +13,8 @@ from tests.sqlalchemy.utils import assert_statements_equal
     ("model", "field", "value", "expected"),
     [
         (User, "name", "Ratatouille 123", select(User).filter(User.name == "Ratatouille 123")),
+        (User, "name", "'Ratatouille 123'", select(User).filter(User.name == "Ratatouille 123")),
+        (User, "name", '"Ratatouille 123"', select(User).filter(User.name == "Ratatouille 123")),
         (User, "age", 25, select(User).filter(User.age == 25)),
         (Account, "name", 25, select(Account).filter(Account.name == "25")),
         (Account, "balance", 25.13, select(Account).filter(Account.balance == 25.13)),
