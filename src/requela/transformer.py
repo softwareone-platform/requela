@@ -115,6 +115,12 @@ class RQLTransformer(Transformer):
     def UNQUOTED_VAL(self, token):
         return str(token)
 
+    def QUOTED_STRING(self, token):
+        return str(token)[1:-1]
+
+    def DOUBLE_QUOTED_STRING(self, token):
+        return str(token)[1:-1]
+
     def UUID(self, token):
         return str(token)
 
