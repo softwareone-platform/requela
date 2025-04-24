@@ -83,6 +83,8 @@ literal: BOOLEAN
        | DATE
        | FLOAT
        | INT
+       | QUOTED_STRING
+       | DOUBLE_QUOTED_STRING
        | UNQUOTED_VAL
        | UUID
 
@@ -90,7 +92,9 @@ literal: BOOLEAN
 tuple: "(" literal ("," literal)* ")"
 
 # Terminal definitions
-# Date and datetime terminals with higher priority
+# Quoted strings, date, datetime and uuids terminals with higher priority
+QUOTED_STRING.3: /'[^']*'/
+DOUBLE_QUOTED_STRING.3: /"[^"]*"/
 DATETIME.3: /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/
 DATE.3: /\d{4}-\d{2}-\d{2}/
 UUID.3: /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/ # increase priority to ensure that UUIDs are matched before generic PROP
@@ -113,6 +117,8 @@ PROP: /[a-zA-Z_][\w\-\.]*/  # Property names: letters, numbers, underscore, dash
 
 # Unquoted value that can contain spaces, wildcards, and other special chars
 UNQUOTED_VAL: /[^(),]+/
+
+
 
 # Import and ignore whitespace
 %import common.WS
