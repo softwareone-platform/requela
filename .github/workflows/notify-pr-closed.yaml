@@ -1,49 +1,17 @@
-name: PR build and merge
+name: Notify Teams on PR
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: read
+    types: [closed]
 
 jobs:
-  build:
+  notify-teams:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install uv and set up its cache
-        uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: ".python-version"
-
-      - name: Install the project dependancies
-        run: uv sync --all-extras --dev
-
-      - name: Run formatting checks
-        run: uv run ruff format --check --diff .
-
-      - name: Run linting
-        run: uv run ruff check .
-
-      - name: Run tests
-        run: uv run pytest
-
       - name: Compute added/removed lines for notification
-        if: ${{ github.event_name == 'pull_request' }}
         id: diff
         run: |
           PR_DATA=$(gh pr view "${{ github.event.pull_request.number }}" --json additions,deletions -q '.')
@@ -54,7 +22,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Notify Microsoft Teams
-        if: ${{ github.event_name == 'pull_request' }}
         uses: softwareone-platform/notify-pr-teams-action@v4
         with:
           webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
@@ -72,16 +39,3 @@ jobs:
           pr_number: ${{ github.event.pull_request.number }}
           pr_status: ${{ github.event.pull_request.state }}
           is_merged: ${{ github.event.pull_request.merged }}
-
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: SonarQube Quality Gate check
-        id: sonarqube-quality-gate-check
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        with:
-          pollingTimeoutSec: 600
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
