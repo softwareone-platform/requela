@@ -220,3 +220,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
                 field = field.desc()
             fields.append(field)
         return query.order_by(*fields)
+
+    def build_query(self, rql_query: str, initial_query: Any = None) -> Any:
+        self.joins = []
+        return super().build_query(rql_query=rql_query, initial_query=initial_query)
