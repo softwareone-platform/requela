@@ -12,6 +12,7 @@ def test_comparison_eq_many_to_one():
     stmt = builder.build_query(query_string)
     alias = aliased(Account)
     expected = select(User).join(alias).filter(alias.name == "My Account")
+    assert len(builder.joins) == 1
     assert_statements_equal(stmt, expected)
 
 
@@ -31,6 +32,7 @@ def test_comparison_any_one_to_many_complex_filter():
     query_string = "any(users,and(eq(users.name,John),gt(users.age,30)))"
     stmt = builder.build_query(query_string)
     alias = aliased(User)
+
     expected = select(Account).filter(
         exists(alias).where(
             alias.account_id == Account.id,
@@ -39,3 +41,15 @@ def test_comparison_any_one_to_many_complex_filter():
         )
     )
     assert_statements_equal(stmt, expected)
+
+
+def test_number_of_joins():
+    builder = SQLAlchemyQueryBuilder(User)
+    query_string = "eq(account.name,My Account)"
+    stmt = builder.build_query(query_string)
+    alias = aliased(Account)
+    expected = select(User).join(alias).filter(alias.name == "My Account")
+    assert_statements_equal(stmt, expected)
+    assert len(builder.joins) == 1
+    builder.build_query(query_string)
+    assert len(builder.joins) == 1
