@@ -7,6 +7,20 @@ RUN apt-get update; \
     apt-get clean -y; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
+# Install GH CLI
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update && apt-get install -y --no-install-recommends gh \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install starship
+RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
+RUN echo 'eval "$(starship init bash)"' >> ~/.bashrc
+
+# Install Claude code
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
 # Download the latest installer
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 
@@ -21,6 +35,8 @@ WORKDIR /app
 
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
+
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy

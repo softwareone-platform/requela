@@ -3,13 +3,13 @@ import enum
 from django.db import models
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     ADMIN = "admin"
     USER = "user"
     GUEST = "guest"
 
 
-class AccountStatus(int, enum.Enum):
+class AccountStatus(enum.IntEnum):
     ACTIVE = 1
     INACTIVE = 0
     PENDING = 2
