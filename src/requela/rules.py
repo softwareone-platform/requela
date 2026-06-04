@@ -19,6 +19,7 @@ class FieldRule:
     allowed_operators: set[Operator] | None = None
     alias: str | None = None
     allow_ordering: bool = True
+    source: str | None = None
 
 
 @dataclass
@@ -98,7 +99,9 @@ class ModelRQLRules:
 
     @classmethod
     def _resolve_alias(cls, alias: str) -> str:
-        field_name, _ = cls._get_field_by_alias(alias)
+        field_name, field_def = cls._get_field_by_alias(alias)
+        if isinstance(field_def, FieldRule) and field_def.source:
+            return field_def.source
         return field_name
 
     @classmethod
@@ -133,7 +136,8 @@ class ModelRQLRules:
         for field_name, field_def in self._fields.items():
             try:
                 # Get field type from model (implementation depends on ORM)
-                field_type = self._get_field_type(field_name)
+                lookup = field_def.source or field_name
+                field_type = self._get_field_type(lookup)
 
                 # If no operators specified, infer from field type
                 if field_def.allowed_operators is None:
@@ -200,7 +204,7 @@ class ModelRQLRules:
             raise ValueError(f"Relation with alias '{alias}' not found")
         if len(relations) > 1:
             raise ValueError(f"Multiple relations found for alias '{alias}'")
-        return list(relations.items())[0]
+        return next(iter(relations.items()))
 
     @classmethod
     def _get_field_by_alias(cls, alias: str) -> tuple[str, FieldRule | RelationshipRule]:

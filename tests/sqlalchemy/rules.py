@@ -54,3 +54,6 @@ class UserRules(ModelRQLRules):
     account = RelationshipRule(
         rules=AccountRules(),
     )
+    status = FieldRule(
+        source="account.status",
+    )

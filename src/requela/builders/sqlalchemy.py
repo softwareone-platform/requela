@@ -41,7 +41,11 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         return select(self.model_class)
 
     def get_field_type(self, field: str) -> type:
-        field_type = getattr(self.model_class, field).property.columns[0].type.python_type
+        model = self.model_class
+        parts = field.split(".")
+        for part in parts[:-1]:
+            model = getattr(model, part).property.mapper.class_
+        field_type = getattr(model, parts[-1]).property.columns[0].type.python_type
         return field_type
 
     def apply_and(self, *conditions: ColumnExpressionArgument) -> ColumnElement:
