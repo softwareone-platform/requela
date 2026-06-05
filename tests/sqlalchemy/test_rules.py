@@ -7,7 +7,7 @@ from sqlalchemy.orm import aliased
 from requela.dataclasses import Operator
 from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules
-from tests.sqlalchemy.models import Account, Actor, User
+from tests.sqlalchemy.models import Account, AccountStatus, Actor, User
 from tests.sqlalchemy.rules import AccountRules, UserRules
 from tests.sqlalchemy.utils import assert_statements_equal
 
@@ -160,6 +160,7 @@ def test_get_documentation():
         "|is_active|eq, ne|yes|",
         "|name|eq, ilike, in, like, ne, out|yes|",
         "|role|in, out|yes|",
+        "|status|eq, in, ne, out|yes|",
     ]
 
 
@@ -189,3 +190,15 @@ def test_tenant_relationship_ne_invalid_value():
         RequelaError, match="`ne` can be applied to relationship only to test for null."
     ):
         account_rules.build_query("ne(tenant,pip)")
+
+
+def test_valid_source_field():
+    user_rules = UserRules()
+    stmt = user_rules.build_query(f"eq(status,{AccountStatus.ACTIVE.value})")
+    account_alias = aliased(Account)
+    expected = (
+        select(User)
+        .filter(account_alias.status == AccountStatus.ACTIVE)
+        .join(account_alias, User.account)
+    )
+    assert_statements_equal(stmt, expected)
