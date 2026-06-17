@@ -156,8 +156,10 @@ def test_get_documentation():
         "|account.tenant.name|eq, ilike, in, like, ne, out|yes|",
         "|account.tenant|eq, ne|no|",
         "|account|eq, ne|no|",
+        "|company_email|eq, ilike, in, like, ne, out|yes|",
         "|events.born.at|eq, gt, gte, lt, lte, ne|yes|",
         "|is_active|eq, ne|yes|",
+        "|is_inactive|eq, ne|yes|",
         "|name|eq, ilike, in, like, ne, out|yes|",
         "|role|in, out|yes|",
         "|status|eq, in, ne, out|yes|",
@@ -202,3 +204,14 @@ def test_valid_source_field():
         .join(account_alias, User.account)
     )
     assert_statements_equal(stmt, expected)
+
+
+def test_valid_hybrid_property():
+    user_rules = UserRules()
+    stmt = user_rules.build_query("eq(is_inactive,true)")
+    assert_statements_equal(stmt, select(User).filter(User.is_inactive.is_(True)))
+
+    stmt = user_rules.build_query("eq(company_email,john.user@requela.com)")
+    assert_statements_equal(
+        stmt, select(User).filter(User.company_email == "john.user@requela.com")
+    )

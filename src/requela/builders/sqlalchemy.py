@@ -45,8 +45,11 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         parts = field.split(".")
         for part in parts[:-1]:
             model = getattr(model, part).property.mapper.class_
-        field_type = getattr(model, parts[-1]).property.columns[0].type.python_type
-        return field_type
+        attr = getattr(model, parts[-1])
+        prop = getattr(attr, "property", None)
+        if prop is not None and hasattr(prop, "columns"):
+            return prop.columns[0].type.python_type
+        return attr.type.python_type
 
     def apply_and(self, *conditions: ColumnExpressionArgument) -> ColumnElement:
         return and_(*conditions)
@@ -61,7 +64,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         self, prop: str, value: str | bool | date | datetime | int | float | None
     ) -> ColumnExpressionArgument:
         model_field = self.resolve_property(prop)
-        if isinstance(model_field.property, RelationshipProperty):
+        if isinstance(getattr(model_field, "property", None), RelationshipProperty):
             if value is not None:
                 raise ValueError("`eq` can be applied to relationship only to test for null.")
             return self.apply_eq_to_relationship(model_field.property)
@@ -82,7 +85,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         self, prop: str, value: str | bool | date | datetime | int | float | None
     ) -> ColumnExpressionArgument:
         model_field = self.resolve_property(prop)
-        if isinstance(model_field.property, RelationshipProperty):
+        if isinstance(getattr(model_field, "property", None), RelationshipProperty):
             if value is not None:
                 raise ValueError("`ne` can be applied to relationship only to test for null.")
             return self.apply_ne_to_relationship(model_field.property)

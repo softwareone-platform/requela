@@ -57,3 +57,6 @@ class UserRules(ModelRQLRules):
     status = FieldRule(
         source="account.status",
     )
+    is_inactive = FieldRule(allowed_operators=[Operator.EQ, Operator.NE])
+
+    company_email = FieldRule()

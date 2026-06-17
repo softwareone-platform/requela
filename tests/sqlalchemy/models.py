@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import sqlalchemy as sa
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import Enum as SQLEnum
 
@@ -68,6 +69,19 @@ class User(Base):
     birth_date: Mapped[date] = mapped_column(Date)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"))
     account: Mapped[Account] = relationship("Account", back_populates="users")
+
+    @hybrid_property
+    def is_inactive(self) -> bool:
+        return self.account.status == AccountStatus.INACTIVE
+
+    @is_inactive.inplace.expression
+    @classmethod
+    def _is_inactive_expr(cls):
+        return cls.account.has(Account.status == AccountStatus.INACTIVE)
+
+    @hybrid_property
+    def company_email(self) -> str:
+        return self.name + "." + self.role + "@requela.com"
 
 
 class ChargesFile(Base):
