@@ -1,22 +1,32 @@
-from collections.abc import Sequence
-from dataclasses import dataclass
+import re
+from collections.abc import Callable, Sequence
 from datetime import date, datetime
+from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.db.models.query import QuerySet
 
 from requela.builders.base import QueryBuilder
 from requela.dataclasses import FilterExpression, OrderByExpression
 
 
-@dataclass
-class PrefetchExpression:
-    relationship_name: str
-    condition: Q
-
-
 class DjangoQueryBuilder(QueryBuilder):
+    def __init__(
+        self,
+        model_class: Any,
+        resolve_alias_callback: Callable | None = None,
+        validate_operator_and_field_callback: Callable | None = None,
+        validate_ordering_callback: Callable | None = None,
+    ):
+        super().__init__(
+            model_class,
+            resolve_alias_callback=resolve_alias_callback,
+            validate_operator_and_field_callback=validate_operator_and_field_callback,
+            validate_ordering_callback=validate_ordering_callback,
+        )
+        self.prefetches: list[str] = []
+
     def get_initial_query(self):
         return self.model_class.objects.all()
 
@@ -86,40 +96,72 @@ class DjangoQueryBuilder(QueryBuilder):
         return ~Q(**{f"{self.resolve_property(prop)}__in": value})
 
     def apply_like(self, prop: str, value: str) -> Q:
-        if value.startswith("*") and value.endswith("*"):
-            return Q(**{f"{self.resolve_property(prop)}__contains": value[1:-1]})
-        elif value.startswith("*") and not value.endswith("*"):
-            return Q(**{f"{self.resolve_property(prop)}__endswith": value[1:]})
-        elif not value.startswith("*") and value.endswith("*"):
-            return Q(**{f"{self.resolve_property(prop)}__startswith": value[:-1]})
-        else:
-            return Q(**{f"{self.resolve_property(prop)}__contains": value})
+        return self.apply_pattern(prop, value, case_insensitive=False)
 
     def apply_ilike(self, prop: str, value: str) -> Q:
-        if value.startswith("*") and value.endswith("*"):
-            return Q(**{f"{self.resolve_property(prop)}__icontains": value[1:-1]})
-        elif value.startswith("*") and not value.endswith("*"):
-            return Q(**{f"{self.resolve_property(prop)}__iendswith": value[1:]})
-        elif not value.startswith("*") and value.endswith("*"):
-            return Q(**{f"{self.resolve_property(prop)}__istartswith": value[:-1]})
-        else:
-            return Q(**{f"{self.resolve_property(prop)}__icontains": value})
+        return self.apply_pattern(prop, value, case_insensitive=True)
+
+    def apply_pattern(self, prop: str, value: str, case_insensitive: bool) -> Q:
+        prefix = "i" if case_insensitive else ""
+        field = self.resolve_property(prop)
+        leading = value.startswith("*")
+        trailing = len(value) > 1 and value.endswith("*")
+        text = value[1 if leading else None : -1 if trailing else None]
+
+        if "*" in text:
+            # Wildcards in the middle: no lookup fits, use an anchored regex
+            regex = "^" + ".*".join(re.escape(part) for part in value.split("*")) + "$"
+            return Q(**{f"{field}__{prefix}regex": regex})
+        if leading and trailing:
+            return Q(**{f"{field}__{prefix}contains": text})
+        if leading:
+            return Q(**{f"{field}__{prefix}endswith": text})
+        if trailing:
+            return Q(**{f"{field}__{prefix}startswith": text})
+        return Q(**{f"{field}__{prefix}exact": text})
 
     def resolve_property(self, prop_path: str) -> str:
         prop = self.resolve_alias(prop_path)
         return prop.replace(".", "__")
 
-    def apply_any(self, relationship_name, condition: Q) -> PrefetchExpression:
-        return PrefetchExpression(relationship_name, condition)
+    def apply_any(self, relationship_name, condition: Q) -> Q:
+        relationship_name = self.resolve_alias(relationship_name)
+        relationship = self.model_class._meta.get_field(relationship_name)
+        related_rows = relationship.related_model.objects.filter(
+            **{relationship.remote_field.name: OuterRef("pk")}
+        ).filter(self._relative_condition(condition, f"{relationship_name}__"))
+        if relationship_name not in self.prefetches:
+            self.prefetches.append(relationship_name)
+        return Q(Exists(related_rows))
+
+    def _relative_condition(self, condition: Q, prefix: str) -> Q:
+        children = []
+        for child in condition.children:
+            if isinstance(child, Q):
+                children.append(self._relative_condition(child, prefix))
+            elif isinstance(child, tuple) and child[0].startswith(prefix):
+                children.append((child[0].removeprefix(prefix), child[1]))
+            elif isinstance(child, tuple):
+                relationship = prefix.removesuffix("__")
+                raise ValueError(
+                    f"Field '{child[0].replace('__', '.')}' is not part of "
+                    f"relationship '{relationship}'."
+                )
+            else:
+                raise ValueError("Nested any() is not supported.")
+        return Q(*children, _connector=condition.connector, _negated=condition.negated)
 
     def apply_filter(self, query: QuerySet, filter_expression: FilterExpression) -> QuerySet:
-        if isinstance(filter_expression.condition, PrefetchExpression):
-            query = query.prefetch_related(filter_expression.condition.relationship_name)
-            return query.filter(filter_expression.condition.condition)
         return query.filter(filter_expression.condition)
 
     def apply_joins(self, query: QuerySet):
+        if self.prefetches:
+            query = query.prefetch_related(*self.prefetches)
         return query
+
+    def build_query(self, rql_query: str, initial_query: Any = None) -> Any:
+        self.prefetches = []
+        return super().build_query(rql_query=rql_query, initial_query=initial_query)
 
     def apply_order_by(self, query: QuerySet, order_by_expression: OrderByExpression) -> QuerySet:
         fields = []

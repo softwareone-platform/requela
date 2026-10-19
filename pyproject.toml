@@ -23,7 +23,6 @@ classifiers = [
 
 dependencies = [
     "lark>=1.2.2",
-    "pytest-randomly>=3.16.0",
 ]
 
 [project.urls]
@@ -48,6 +47,7 @@ dev = [
     "ruff>=0.8.0,<1.0",
     "django>=5.1.6",
     "pre-commit>=4.1.0",
+    "pytest-randomly>=3.16.0",
 ]
 
 

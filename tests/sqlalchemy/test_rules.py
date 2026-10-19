@@ -1,14 +1,21 @@
 from datetime import date, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import aliased
 
+from requela.builders.sqlalchemy import SQLAlchemyQueryBuilder
 from requela.dataclasses import Operator
 from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules
-from tests.sqlalchemy.models import Account, AccountStatus, Actor, User
-from tests.sqlalchemy.rules import AccountRules, UserRules
+from tests.sqlalchemy.models import Account, AccountStatus, Actor, Tenant, User
+from tests.sqlalchemy.rules import (
+    AccountRules,
+    AccountWithAliasedUsersRules,
+    AccountWithDuplicatedRelationAliasRules,
+    AccountWithPrefixedRelationsRules,
+    UserRules,
+)
 from tests.sqlalchemy.utils import assert_statements_equal
 
 
@@ -215,3 +222,69 @@ def test_valid_hybrid_property():
     assert_statements_equal(
         stmt, select(User).filter(User.company_email == "john.user@requela.com")
     )
+
+
+def test_any_on_aliased_relationship_filters_on_the_relationship() -> None:
+    """`any()` accepts a relationship alias and filters on the aliased relationship."""
+    account_filter = AccountWithAliasedUsersRules()
+    stmt = account_filter.build_query("any(members,eq(members.name,John))")
+    alias = aliased(User)
+    expected = select(Account).filter(
+        exists(alias).where(alias.account_id == Account.id, alias.name == "John")
+    )
+    assert_statements_equal(stmt, expected)
+
+
+def test_relationship_alias_is_not_matched_by_a_longer_alias() -> None:
+    """A relationship alias that prefixes another ('tenant'/'tenants') resolves exactly."""
+    account_filter = AccountWithPrefixedRelationsRules()
+    stmt = account_filter.build_query("any(tenants,eq(tenants.name,John))")
+    alias = aliased(User)
+    expected = select(Account).filter(
+        exists(alias).where(alias.account_id == Account.id, alias.name == "John")
+    )
+    assert_statements_equal(stmt, expected)
+
+
+def test_relationship_alias_prefixing_another_still_resolves() -> None:
+    """The shorter alias of two prefixed relationship aliases ('tenant') still resolves."""
+    account_filter = AccountWithPrefixedRelationsRules()
+    stmt = account_filter.build_query("eq(tenant.name,Acme)")
+    alias = aliased(Tenant)
+    expected = select(Account).outerjoin(alias).filter(alias.name == "Acme")
+    assert_statements_equal(stmt, expected)
+
+
+@pytest.mark.parametrize(
+    "query_string",
+    [
+        "eq(members.name,John)",
+        "and(eq(name,Acme),eq(members.name,John))",
+        "or(any(members,eq(members.name,Jane)),eq(members.name,John))",
+        "order_by(members.name)",
+    ],
+)
+def test_field_through_to_many_relationship_requires_any(query_string: str) -> None:
+    """A field reached through a to-many relationship outside `any()` is rejected."""
+    account_filter = AccountWithAliasedUsersRules()
+    with pytest.raises(
+        RequelaError,
+        match="Field 'members.name' goes through the to-many relationship 'members'",
+    ):
+        account_filter.build_query(query_string)
+
+
+def test_field_through_to_many_relationship_requires_any_without_rules() -> None:
+    """The builder rejects a to-many field path outside `any()` even without rules."""
+    builder = SQLAlchemyQueryBuilder(Account)
+    with pytest.raises(
+        ValueError, match="Field 'users.name' goes through the to-many relationship 'users'"
+    ):
+        builder.build_query("eq(users.name,John)")
+
+
+def test_relationship_alias_shared_by_two_relationships_is_rejected() -> None:
+    """A field whose relationship alias matches two relationships raises `RequelaError`."""
+    account_filter = AccountWithDuplicatedRelationAliasRules()
+    with pytest.raises(RequelaError, match="Multiple relations found for alias 'owners.name'"):
+        account_filter.build_query("eq(owners.name,John)")

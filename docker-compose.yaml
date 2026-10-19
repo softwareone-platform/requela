@@ -1,9 +1,29 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: requela
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    # Throwaway test database: keep the data in memory
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d requela"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
   tests:
     build: .
-    command: pytest -v 
+    command: pytest -v
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/requela
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 
   bash:
@@ -12,3 +32,8 @@ services:
     command: bash
     stdin_open: true
     tty: true
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/requela
+    depends_on:
+      postgres:
+        condition: service_healthy

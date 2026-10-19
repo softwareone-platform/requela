@@ -12,10 +12,12 @@ from sqlalchemy import (
     UnaryExpression,
     and_,
     exists,
+    inspect,
     or_,
     select,
 )
 from sqlalchemy.orm import DeclarativeBase, Query, RelationshipProperty, aliased
+from sqlalchemy.sql.util import find_tables
 
 from requela.builders.base import QueryBuilder
 from requela.dataclasses import FilterExpression, JoinExpression, OrderByExpression
@@ -36,6 +38,9 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
             validate_ordering_callback=validate_ordering_callback,
         )
         self.joins: list[JoinExpression] = []
+        # Aliases of to-many relationships that are not joined, mapped to the property path
+        # that created them. They are only valid inside `any()`, which replaces them.
+        self.to_many_aliases: dict[Any, str] = {}
 
     def get_initial_query(self):
         return select(self.model_class)
@@ -140,6 +145,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         return self.resolve_property(prop).ilike(sql_pattern)
 
     def resolve_property(self, prop_path: str) -> UnaryExpression:
+        field_path = prop_path
         prop_path = self.resolve_alias(prop_path)
         model = self.model_class
         parts = prop_path.split(".")
@@ -152,7 +158,9 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
                 target_model = relationship.property.mapper.class_
                 alias = aliased(target_model)
 
-                if not relationship.property.uselist:
+                if relationship.property.uselist:
+                    self.to_many_aliases[inspect(alias).selectable] = field_path
+                else:
                     is_nullable = any(
                         column.nullable for column in relationship.property.local_columns
                     )
@@ -168,7 +176,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
     def apply_any(
         self, relationship_name, condition: ColumnElement | ColumnExpressionArgument
     ) -> Exists:
-        relationship = getattr(self.model_class, relationship_name)
+        relationship = getattr(self.model_class, self.resolve_alias(relationship_name))
         related_model = relationship.property.mapper.class_
         alias = aliased(related_model)
 
@@ -211,7 +219,18 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
             )
         return condition.operator(getattr(alias, condition.left.key), condition.right.value)
 
+    def check_no_to_many_traversal(self, clause: Any) -> None:
+        for table in find_tables(clause, check_columns=True, include_aliases=True):
+            if table in self.to_many_aliases:
+                field_path = self.to_many_aliases[table]
+                relationship_path = field_path.rsplit(".", 1)[0]
+                raise ValueError(
+                    f"Field '{field_path}' goes through the to-many relationship "
+                    f"'{relationship_path}': use any() to filter on it."
+                )
+
     def apply_filter(self, query: Query, filter_expression: FilterExpression) -> Query:
+        self.check_no_to_many_traversal(filter_expression.condition)
         return query.filter(filter_expression.condition)
 
     def apply_joins(self, query: Query):
@@ -223,6 +242,7 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         fields = []
         for order_field in order_by_expression.fields:
             field = self.resolve_property(order_field.field_path)
+            self.check_no_to_many_traversal(field.expression)
             if order_field.direction == "-":
                 field = field.desc()
             fields.append(field)
@@ -230,4 +250,5 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
 
     def build_query(self, rql_query: str, initial_query: Any = None) -> Any:
         self.joins = []
+        self.to_many_aliases = {}
         return super().build_query(rql_query=rql_query, initial_query=initial_query)

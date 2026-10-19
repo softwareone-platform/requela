@@ -15,6 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: requela
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d requela"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,6 +56,8 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/requela
 
       - name: Compute added/removed lines for notification
         if: ${{ github.event_name == 'pull_request' }}

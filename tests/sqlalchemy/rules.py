@@ -60,3 +60,35 @@ class UserRules(ModelRQLRules):
     is_inactive = FieldRule(allowed_operators=[Operator.EQ, Operator.NE])
 
     company_email = FieldRule()
+
+
+class UserNameRules(ModelRQLRules):
+    __model__ = User
+
+    name = FieldRule()
+    age = FieldRule()
+
+
+class AccountWithAliasedUsersRules(ModelRQLRules):
+    __model__ = Account
+
+    name = FieldRule()
+    users = RelationshipRule(alias="members", rules=UserNameRules())
+
+
+class AccountWithPrefixedRelationsRules(ModelRQLRules):
+    """Relation aliases where one ('tenant') is a prefix of the other ('tenants')."""
+
+    __model__ = Account
+
+    tenant = RelationshipRule(rules=TenantRules())
+    users = RelationshipRule(alias="tenants", rules=UserNameRules())
+
+
+class AccountWithDuplicatedRelationAliasRules(ModelRQLRules):
+    """Misconfigured rules: two relationships share the alias 'owners'."""
+
+    __model__ = Account
+
+    tenant = RelationshipRule(alias="owners", rules=TenantRules())
+    users = RelationshipRule(alias="owners", rules=UserNameRules())

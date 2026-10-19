@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 import pytest
+from django.db.models import QuerySet
 
 from requela.builders.django import DjangoQueryBuilder
 from tests.django.models import Account, User
@@ -258,10 +259,15 @@ def test_comparison_out(model, field, values, expected):
         (User, "name", "Rat*", User.objects.filter(name__startswith="Rat")),
         (User, "name", "*ouille", User.objects.filter(name__endswith="ouille")),
         (User, "name", "*atato*", User.objects.filter(name__contains="atato")),
-        (User, "name", "atato", User.objects.filter(name__contains="atato")),
+        (User, "name", "atato", User.objects.filter(name__exact="atato")),
+        (User, "name", "Rat*ouille", User.objects.filter(name__regex="^Rat.*ouille$")),
+        (User, "name", "*R.t*ouille", User.objects.filter(name__regex="^.*R\\.t.*ouille$")),
     ],
 )
-def test_comparison_like(model, field, pattern, expected):
+def test_comparison_like(
+    model: type[User], field: str, pattern: str, expected: QuerySet[User]
+) -> None:
+    """`like` maps `*` wildcards to the matching case-sensitive lookup or regex."""
     builder = DjangoQueryBuilder(model)
     query_string = f"like({field},{pattern})"
     stmt = builder.build_query(query_string)
@@ -272,13 +278,17 @@ def test_comparison_like(model, field, pattern, expected):
 @pytest.mark.parametrize(
     ("model", "field", "pattern", "expected"),
     [
-        (User, "name", "rat*", User.objects.filter(name__startswith="rat")),
-        (User, "name", "*OUILLE", User.objects.filter(name__endswith="OUILLE")),
-        (User, "name", "*AtAtO*", User.objects.filter(name__contains="AtAtO")),
-        (User, "name", "AtAtO", User.objects.filter(name__contains="AtAtO")),
+        (User, "name", "rat*", User.objects.filter(name__istartswith="rat")),
+        (User, "name", "*OUILLE", User.objects.filter(name__iendswith="OUILLE")),
+        (User, "name", "*AtAtO*", User.objects.filter(name__icontains="AtAtO")),
+        (User, "name", "AtAtO", User.objects.filter(name__iexact="AtAtO")),
+        (User, "name", "RAT*OUILLE", User.objects.filter(name__iregex="^RAT.*OUILLE$")),
     ],
 )
-def test_comparison_ilike(model, field, pattern, expected):
+def test_comparison_ilike(
+    model: type[User], field: str, pattern: str, expected: QuerySet[User]
+) -> None:
+    """`ilike` maps `*` wildcards to the matching case-insensitive lookup or regex."""
     builder = DjangoQueryBuilder(model)
     query_string = f"ilike({field},{pattern})"
     stmt = builder.build_query(query_string)
