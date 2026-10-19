@@ -1,7 +1,9 @@
 import os
 
-# PostgreSQL is mandatory for the test suite. The default matches the `postgres` service
-# in docker-compose.yaml started with `docker compose up -d postgres`.
+# PostgreSQL and MongoDB are mandatory for the test suite. The defaults match the
+# `postgres` and `mongo` services in docker-compose.yaml (`docker compose up -d --wait`).
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/requela"
 )
+
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")

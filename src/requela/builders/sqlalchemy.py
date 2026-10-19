@@ -30,12 +30,14 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         resolve_alias_callback: Callable | None = None,
         validate_operator_and_field_callback: Callable | None = None,
         validate_ordering_callback: Callable | None = None,
+        get_field_rule_callback: Callable | None = None,
     ):
         super().__init__(
             model_class,
             resolve_alias_callback=resolve_alias_callback,
             validate_operator_and_field_callback=validate_operator_and_field_callback,
             validate_ordering_callback=validate_ordering_callback,
+            get_field_rule_callback=get_field_rule_callback,
         )
         self.joins: list[JoinExpression] = []
         # Aliases of to-many relationships that are not joined, mapped to the property path
@@ -75,8 +77,11 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
             return self.apply_eq_to_relationship(model_field.property)
 
         if value is True or value is False or value is None:
-            return model_field.is_(value)
-        return model_field == self.cast_value(model_field, value)
+            value = self.convert_value(prop, value)
+            if value is True or value is False or value is None:
+                return model_field.is_(value)
+            return model_field == value
+        return model_field == self.convert_value(prop, self.cast_value(model_field, value))
 
     def apply_eq_to_relationship(
         self, relationship_property: RelationshipProperty
@@ -95,8 +100,11 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
                 raise ValueError("`ne` can be applied to relationship only to test for null.")
             return self.apply_ne_to_relationship(model_field.property)
         if value is True or value is False or value is None:
-            return model_field.isnot(value)
-        return model_field != self.cast_value(model_field, value)
+            value = self.convert_value(prop, value)
+            if value is True or value is False or value is None:
+                return model_field.isnot(value)
+            return model_field != value
+        return model_field != self.convert_value(prop, self.cast_value(model_field, value))
 
     def apply_ne_to_relationship(
         self, relationship_property: RelationshipProperty
@@ -107,33 +115,33 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
         return or_(*conditions)
 
     def apply_gt(self, prop: str, value: date | datetime | int | float) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) > self.cast_value(self.resolve_property(prop), value)
+        return self.resolve_property(prop) > self.cast_and_convert(prop, value)
 
     def apply_lt(self, prop: str, value: date | datetime | int | float) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) < self.cast_value(self.resolve_property(prop), value)
+        return self.resolve_property(prop) < self.cast_and_convert(prop, value)
 
     def apply_gte(
         self, prop: str, value: date | datetime | int | float
     ) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) >= self.cast_value(self.resolve_property(prop), value)
+        return self.resolve_property(prop) >= self.cast_and_convert(prop, value)
 
     def apply_lte(
         self, prop: str, value: date | datetime | int | float
     ) -> ColumnExpressionArgument:
-        return self.resolve_property(prop) <= self.cast_value(self.resolve_property(prop), value)
+        return self.resolve_property(prop) <= self.cast_and_convert(prop, value)
 
     def apply_in(
         self, prop: str, value: Sequence[str] | Sequence[float] | Sequence[int]
     ) -> ColumnExpressionArgument:
         return self.resolve_property(prop).in_(
-            [self.cast_value(self.resolve_property(prop), item) for item in value]
+            [self.cast_and_convert(prop, item) for item in value]
         )
 
     def apply_out(
         self, prop: str, value: Sequence[str] | Sequence[float] | Sequence[int]
     ) -> ColumnExpressionArgument:
         return self.resolve_property(prop).not_in(
-            [self.cast_value(self.resolve_property(prop), item) for item in value]
+            [self.cast_and_convert(prop, item) for item in value]
         )
 
     def apply_like(self, prop: str, value: str) -> ColumnExpressionArgument:
@@ -188,6 +196,9 @@ class SQLAlchemyQueryBuilder(QueryBuilder):
             self._adapt_condition(condition, alias),
         )
         return exists_clause
+
+    def cast_and_convert(self, prop: str, value: Any) -> Any:
+        return self.convert_value(prop, self.cast_value(self.resolve_property(prop), value))
 
     def cast_value(self, column: ColumnElement, value: Any) -> Any:  # pragma: no cover
         if isinstance(value, column.type.python_type):

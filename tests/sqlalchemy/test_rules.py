@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Any
 
 import pytest
 from sqlalchemy import exists, select
@@ -15,6 +16,8 @@ from tests.sqlalchemy.rules import (
     AccountWithDuplicatedRelationAliasRules,
     AccountWithPrefixedRelationsRules,
     UserRules,
+    UserWithConvertersRules,
+    UserWithFlagStoredAsIntRules,
 )
 from tests.sqlalchemy.utils import assert_statements_equal
 
@@ -288,3 +291,44 @@ def test_relationship_alias_shared_by_two_relationships_is_rejected() -> None:
     account_filter = AccountWithDuplicatedRelationAliasRules()
     with pytest.raises(RequelaError, match="Multiple relations found for alias 'owners.name'"):
         account_filter.build_query("eq(owners.name,John)")
+
+
+@pytest.mark.parametrize(
+    ("query_string", "expected"),
+    [
+        ("eq(name,john)", User.name == "JOHN"),
+        ("ne(name,john)", User.name != "JOHN"),
+        ("gt(age,2)", User.age > 24),
+        ("lte(age,2)", User.age <= 24),
+        ("in(name,(john,jane))", User.name.in_(["JOHN", "JANE"])),
+        ("out(name,(john,jane))", User.name.not_in(["JOHN", "JANE"])),
+        ("eq(is_active,true)", User.is_active.is_(False)),
+        ("ne(is_active,true)", User.is_active.isnot(False)),
+        ("eq(name,null())", User.name.is_(None)),
+    ],
+)
+def test_value_converter_converts_filter_values(query_string: str, expected: Any) -> None:
+    """`value_converter` converts every compared value except `null()`."""
+    stmt = UserWithConvertersRules().build_query(query_string)
+    assert_statements_equal(stmt, select(User).filter(expected))
+
+
+def test_value_converter_is_not_applied_to_like_patterns() -> None:
+    """`like` patterns are wildcard strings and are never converted."""
+    stmt = UserWithConvertersRules().build_query("like(name,jo*)")
+    assert_statements_equal(stmt, select(User).filter(User.name.like("jo%")))
+
+
+@pytest.mark.parametrize(
+    ("query_string", "expected"),
+    [
+        ("eq(is_active,true)", User.is_active == 1),
+        ("ne(is_active,true)", User.is_active != 1),
+    ],
+)
+def test_value_converter_result_that_is_not_boolean_is_compared(
+    query_string: str, expected: Any
+) -> None:
+    """A boolean converted to a non-boolean value is compared with `=`/`!=`, not `IS`."""
+    stmt = UserWithFlagStoredAsIntRules().build_query(query_string)
+    assert_statements_equal(stmt, select(User).filter(expected))

@@ -9,7 +9,7 @@ authors = [
 
 license = {file = "LICENSE.txt"}
 requires-python = ">=3.12,<4"
-keywords = ["rql", "sqlalchemy", "query", "filter", "orm"]
+keywords = ["rql", "sqlalchemy", "django", "mongodb", "query", "filter", "orm"]
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -48,6 +48,8 @@ dev = [
     "django>=5.1.6",
     "pre-commit>=4.1.0",
     "pytest-randomly>=3.16.0",
+    "pymongo>=4.13",
+    "pydantic>=2",
 ]
 
 

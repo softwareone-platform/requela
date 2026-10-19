@@ -92,3 +92,17 @@ class AccountWithDuplicatedRelationAliasRules(ModelRQLRules):
 
     tenant = RelationshipRule(alias="owners", rules=TenantRules())
     users = RelationshipRule(alias="owners", rules=UserNameRules())
+
+
+class UserWithConvertersRules(ModelRQLRules):
+    __model__ = User
+
+    name = FieldRule(value_converter=str.upper)
+    age = FieldRule(value_converter=lambda value: value * 12)
+    is_active = FieldRule(value_converter=lambda value: not value)
+
+
+class UserWithFlagStoredAsIntRules(ModelRQLRules):
+    __model__ = User
+
+    is_active = FieldRule(value_converter=int)

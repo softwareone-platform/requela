@@ -123,10 +123,89 @@ class UserRules(ModelRQLRules):
     query = rules.build_query("and(eq(name,John),gt(age,30),eq(events.born.at,2024-01-01))&order_by(name,-age)")
 ```
 
+### MongoDB
+
+MongoDB collections are described with pydantic models or dataclasses. Install PyMongo (4.13 or
+later) alongside requela:
+
+```bash
+pip install requela pymongo
+```
+
+Set the builder explicitly with `__builder__`, as there is no ORM model to infer it from. An
+abstract base class shares it with every rules class, including the nested ones:
+
+```python
+from datetime import datetime
+
+from bson import ObjectId
+from pydantic import BaseModel, ConfigDict, Field
+
+from requela import FieldRule, ModelRQLRules, RelationshipRule
+from requela.builders.mongo import MongoQueryBuilder
+
+
+class Tag(BaseModel):
+    name: str
+    value: str
+
+
+class Event(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    id: ObjectId = Field(alias="_id")
+    time: datetime
+    level: str
+    tags: list[Tag] = []
+
+
+class MongoRules(ModelRQLRules):
+    __abstract__ = True
+    __builder__ = MongoQueryBuilder
+
+
+class TagRules(MongoRules):
+    __model__ = Tag
+
+    name = FieldRule()
+    value = FieldRule()
+
+
+class EventRules(MongoRules):
+    __model__ = Event
+
+    id = FieldRule()
+    time = FieldRule()
+    level = FieldRule()
+    tags = RelationshipRule(rules=TagRules())
+
+
+query = EventRules().build_query("and(eq(level,ERROR),any(tags,eq(tags.name,env)))&order_by(-time)")
+# query.filter == {"$and": [{"level": "ERROR"}, {"tags": {"$elemMatch": {"name": "env"}}}]}
+# query.sort == [("time", -1)]
+
+documents = collection.find(query.filter).sort(query.sort).to_list()  # pymongo.MongoClient
+documents = await collection.find(query.filter).sort(query.sort).to_list()  # pymongo.AsyncMongoClient
+```
+
+The builder never runs queries, so its output works with both the blocking and the asyncio
+PyMongo clients. Fields are filtered on their stored keys: pydantic aliases (`id` stored as
+`_id`) or, for dataclasses, `field(metadata={"mongo_key": "_id"})`.
+
+Things to know:
+
+* Fields inside a list of nested models can only be filtered through `any()`, which matches
+  one single element (`$elemMatch`).
+* `null()` also matches missing fields, and `ne`, `out` and `not` also match documents where
+  the field is null or missing.
+* Quote ObjectIds that start with a digit: `eq(id,'65f0c0ffee0ddba11ad0beef')`.
+* When the stored format differs from the model type, convert the value with
+  `value_converter`, e.g. a datetime stored as a Unix timestamp:
+  `time = FieldRule(value_converter=lambda value: int(value.timestamp()))`.
+
 
 
 
 ## License
 
 ReQueLa is licensed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0) and is copyright SoftwareOne AG.
-

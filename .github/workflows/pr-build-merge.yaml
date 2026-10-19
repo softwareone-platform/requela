@@ -29,6 +29,15 @@ jobs:
           --health-interval 2s
           --health-timeout 5s
           --health-retries 15
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
 
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +67,7 @@ jobs:
         run: uv run pytest
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/requela
+          MONGO_URL: mongodb://localhost:27017
 
       - name: Compute added/removed lines for notification
         if: ${{ github.event_name == 'pull_request' }}
