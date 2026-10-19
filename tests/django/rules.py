@@ -29,3 +29,17 @@ class UserRules(ModelRQLRules):
         alias="account",
         rules=AccountRules(),
     )
+
+
+class UserNameRules(ModelRQLRules):
+    __model__ = User
+
+    name = FieldRule()
+    age = FieldRule()
+
+
+class AccountWithAliasedUsersRules(ModelRQLRules):
+    __model__ = Account
+
+    name = FieldRule()
+    users = RelationshipRule(alias="members", rules=UserNameRules())

@@ -1,12 +1,13 @@
 from datetime import date, datetime
 
 import pytest
+from django.db.models import Exists, OuterRef
 
 from requela.dataclasses import Operator
 from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules
-from tests.django.models import User
-from tests.django.rules import UserRules
+from tests.django.models import Account, User
+from tests.django.rules import AccountWithAliasedUsersRules, UserRules
 from tests.django.utils import assert_statements_equal
 
 
@@ -111,3 +112,13 @@ def test_filter_class_order_field_not_allowed():
 
     with pytest.raises(RequelaError, match="Order by 'name' is not allowed."):
         UserRules().build_query("order_by(name)")
+
+
+def test_any_on_aliased_relationship_filters_on_the_relationship() -> None:
+    """`any()` accepts a relationship alias and filters on the aliased relationship."""
+    account_filter = AccountWithAliasedUsersRules()
+    stmt = account_filter.build_query("any(members,eq(members.name,John))")
+    expected = Account.objects.filter(
+        Exists(User.objects.filter(account=OuterRef("pk")).filter(name="John"))
+    )
+    assert_statements_equal(stmt, expected)

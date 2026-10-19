@@ -283,6 +283,7 @@ def test_comparison_like(model, field, pattern, expected):
         (User, "name", "rat*", select(User).filter(User.name.ilike("rat%"))),
         (User, "name", "*OUILLE", select(User).filter(User.name.ilike("%OUILLE"))),
         (User, "name", "*AtAtO*", select(User).filter(User.name.ilike("%AtAtO%"))),
+        (User, "name", '"*AtAtO*"', select(User).filter(User.name.ilike("%AtAtO%"))),
     ],
 )
 def test_comparison_ilike(model, field, pattern, expected):
