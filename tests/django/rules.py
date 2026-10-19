@@ -43,3 +43,10 @@ class AccountWithAliasedUsersRules(ModelRQLRules):
 
     name = FieldRule()
     users = RelationshipRule(alias="members", rules=UserNameRules())
+
+
+class UserWithConvertersRules(ModelRQLRules):
+    __model__ = User
+
+    name = FieldRule(value_converter=str.upper)
+    age = FieldRule(value_converter=lambda value: value * 12)

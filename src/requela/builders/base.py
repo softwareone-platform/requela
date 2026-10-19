@@ -2,12 +2,19 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
+from enum import Enum
 from functools import partial
 from typing import Any
 
 from lark.exceptions import VisitError
 
-from requela.dataclasses import FilterExpression, Operator, OperatorFunctions, OrderByExpression
+from requela.dataclasses import (
+    DEFAULT_OPERATORS,
+    FilterExpression,
+    Operator,
+    OperatorFunctions,
+    OrderByExpression,
+)
 from requela.parser import parse
 from requela.transformer import RQLTransformer
 
@@ -21,11 +28,13 @@ class QueryBuilder(ABC):
         resolve_alias_callback: Callable | None = None,
         validate_operator_and_field_callback: Callable | None = None,
         validate_ordering_callback: Callable | None = None,
+        get_field_rule_callback: Callable | None = None,
     ):
         self.model_class = model_class
         self.resolve_alias_callback = resolve_alias_callback
         self.validate_operator_and_field_callback = validate_operator_and_field_callback
         self.validate_ordering_callback = validate_ordering_callback
+        self.get_field_rule_callback = get_field_rule_callback
         self.transformer = RQLTransformer(
             OperatorFunctions(
                 and_op=self.apply_and,
@@ -128,6 +137,18 @@ class QueryBuilder(ABC):
     def validate_operator_and_field(self, field: str, operator: Operator) -> None:
         if self.validate_operator_and_field_callback:
             return self.validate_operator_and_field_callback(field, operator)
+
+    def get_default_operators(self, field_type: type) -> set[Operator] | None:
+        if issubclass(field_type, Enum):
+            return DEFAULT_OPERATORS.get(Enum)
+        return DEFAULT_OPERATORS.get(field_type)
+
+    def convert_value(self, prop: str, value: Any) -> Any:
+        """Applies the field rule's `value_converter`, if any, to a value already cast."""
+        if value is None or not self.get_field_rule_callback:
+            return value
+        converter = getattr(self.get_field_rule_callback(prop), "value_converter", None)
+        return converter(value) if converter else value
 
     def resolve_alias(self, alias: str) -> str:
         if self.resolve_alias_callback:

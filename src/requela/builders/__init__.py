@@ -9,6 +9,7 @@ def get_builder_for_model(
     resolve_alias_callback: Callable | None = None,
     validate_operator_and_field_callback: Callable | None = None,
     validate_ordering_callback: Callable | None = None,
+    get_field_rule_callback: Callable | None = None,
 ):
     """Returns appropriate builder based on model type"""
 
@@ -21,6 +22,7 @@ def get_builder_for_model(
             resolve_alias_callback=resolve_alias_callback,
             validate_operator_and_field_callback=validate_operator_and_field_callback,
             validate_ordering_callback=validate_ordering_callback,
+            get_field_rule_callback=get_field_rule_callback,
         )
     # Django model
     elif hasattr(model, "_meta"):  # pragma: no branch
@@ -31,6 +33,7 @@ def get_builder_for_model(
             resolve_alias_callback=resolve_alias_callback,
             validate_operator_and_field_callback=validate_operator_and_field_callback,
             validate_ordering_callback=validate_ordering_callback,
+            get_field_rule_callback=get_field_rule_callback,
         )
     else:  # pragma: no cover
         raise ValueError(f"Unsupported model type: {type(model)}")

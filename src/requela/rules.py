@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum, IntEnum, StrEnum
 from typing import Any, ClassVar
 
 from requela.builders import QueryBuilder, get_builder_for_model
-from requela.dataclasses import DEFAULT_OPERATORS, Operator
+from requela.dataclasses import Operator
 from requela.exceptions import RequelaError
 
 DOCS_HEADER = [
@@ -20,6 +20,8 @@ class FieldRule:
     alias: str | None = None
     allow_ordering: bool = True
     source: str | None = None
+    # Converts a value, already cast to the field's type, to the stored format
+    value_converter: Callable[[Any], Any] | None = None
 
 
 @dataclass
@@ -30,11 +32,18 @@ class RelationshipRule:
 
 class ModelRQLRules:
     __model__: ClassVar[Any]
+    # Builder class to use; when not set, it is inferred from the model (SQLAlchemy, Django)
+    __builder__: ClassVar[type[QueryBuilder] | None] = None
     _fields: ClassVar[dict[str, FieldRule]]
     _relations: ClassVar[dict[str, RelationshipRule]]
 
     def __init_subclass__(cls):
         super().__init_subclass__()
+
+        # Abstract rules classes only share settings (e.g. `__builder__`) with subclasses.
+        # Read from the class itself so that subclasses of an abstract class are concrete.
+        if cls.__dict__.get("__abstract__", False):
+            return
 
         if not hasattr(cls, "__model__"):
             raise TypeError(f"{cls.__name__} must define __model__")
@@ -54,6 +63,8 @@ class ModelRQLRules:
         cls._relations = relations
 
     def __init__(self):
+        if self.__class__.__dict__.get("__abstract__", False):
+            raise TypeError(f"{self.__class__.__name__} is abstract and cannot be instantiated")
         self.builder = self._get_builder()
         self._validate()
 
@@ -122,13 +133,21 @@ class ModelRQLRules:
             raise ValueError(f"Order by '{field}' is not allowed.")
 
     @classmethod
+    def _get_field_rule(cls, alias: str) -> FieldRule | RelationshipRule:
+        _, field_def = cls._get_field_by_alias(alias)
+        return field_def
+
+    @classmethod
     def _get_builder(cls) -> QueryBuilder:
-        return get_builder_for_model(
-            cls.__model__,
-            resolve_alias_callback=cls._resolve_alias,
-            validate_operator_and_field_callback=cls._validate_operator_and_field,
-            validate_ordering_callback=cls._validate_ordering,
-        )
+        callbacks = {
+            "resolve_alias_callback": cls._resolve_alias,
+            "validate_operator_and_field_callback": cls._validate_operator_and_field,
+            "validate_ordering_callback": cls._validate_ordering,
+            "get_field_rule_callback": cls._get_field_rule,
+        }
+        if cls.__builder__ is not None:
+            return cls.__builder__(cls.__model__, **callbacks)
+        return get_builder_for_model(cls.__model__, **callbacks)
 
     def _validate(self) -> None:
         errors = []
@@ -141,10 +160,7 @@ class ModelRQLRules:
 
                 # If no operators specified, infer from field type
                 if field_def.allowed_operators is None:
-                    if issubclass(field_type, Enum | StrEnum | IntEnum):
-                        default_operators = DEFAULT_OPERATORS.get(Enum)
-                    else:
-                        default_operators = DEFAULT_OPERATORS.get(field_type)
+                    default_operators = self.builder.get_default_operators(field_type)
 
                     if default_operators is None:  # pragma: no cover
                         errors.append(
@@ -168,6 +184,8 @@ class ModelRQLRules:
                 errors.append(
                     f"Field '{field_name}' not found in model '{self.__model__.__name__}'."
                 )
+            except TypeError as e:
+                errors.append(str(e))
 
         if errors:
             raise ExceptionGroup(
@@ -179,14 +197,10 @@ class ModelRQLRules:
         """Gets the type of a field - to be implemented by specific ORM builders"""
         return self.builder.get_field_type(field_name)
 
-    @classmethod
-    def _validate_operators(cls, field_type: type, operators: set[Operator]) -> set[Operator]:
+    def _validate_operators(self, field_type: type, operators: set[Operator]) -> set[Operator]:
         """Validates operators against field type"""
 
-        if issubclass(field_type, Enum | StrEnum | IntEnum):
-            valid_operators = DEFAULT_OPERATORS.get(Enum)
-        else:
-            valid_operators = DEFAULT_OPERATORS.get(field_type)
+        valid_operators = self.builder.get_default_operators(field_type)
 
         if not valid_operators:  # pragma: no cover
             return operators

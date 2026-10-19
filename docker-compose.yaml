@@ -16,13 +16,29 @@ services:
       timeout: 5s
       retries: 15
 
+  mongo:
+    image: mongo:${MONGO_VERSION:-7}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    # Throwaway test database: keep the data in memory
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
   tests:
     build: .
     command: pytest -v
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/requela
+      MONGO_URL: mongodb://mongo:27017
     depends_on:
       postgres:
+        condition: service_healthy
+      mongo:
         condition: service_healthy
 
 
@@ -34,6 +50,9 @@ services:
     tty: true
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/requela
+      MONGO_URL: mongodb://mongo:27017
     depends_on:
       postgres:
+        condition: service_healthy
+      mongo:
         condition: service_healthy

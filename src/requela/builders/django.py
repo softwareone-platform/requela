@@ -18,12 +18,14 @@ class DjangoQueryBuilder(QueryBuilder):
         resolve_alias_callback: Callable | None = None,
         validate_operator_and_field_callback: Callable | None = None,
         validate_ordering_callback: Callable | None = None,
+        get_field_rule_callback: Callable | None = None,
     ):
         super().__init__(
             model_class,
             resolve_alias_callback=resolve_alias_callback,
             validate_operator_and_field_callback=validate_operator_and_field_callback,
             validate_ordering_callback=validate_ordering_callback,
+            get_field_rule_callback=get_field_rule_callback,
         )
         self.prefetches: list[str] = []
 
@@ -70,30 +72,32 @@ class DjangoQueryBuilder(QueryBuilder):
     def apply_eq(self, prop: str, value: str | bool | date | datetime | int | float | None) -> Q:
         if value is None:
             return Q(**{f"{self.resolve_property(prop)}__isnull": True})
-        return Q(**{self.resolve_property(prop): value})
+        return Q(**{self.resolve_property(prop): self.convert_value(prop, value)})
 
     def apply_ne(self, prop: str, value: str | bool | date | datetime | int | float | None) -> Q:
         if value is None:
             return Q(**{f"{self.resolve_property(prop)}__isnull": False})
-        return ~Q(**{self.resolve_property(prop): value})
+        return ~Q(**{self.resolve_property(prop): self.convert_value(prop, value)})
 
     def apply_gt(self, prop: str, value: date | datetime | int | float) -> Q:
-        return Q(**{f"{self.resolve_property(prop)}__gt": value})
+        return Q(**{f"{self.resolve_property(prop)}__gt": self.convert_value(prop, value)})
 
     def apply_lt(self, prop: str, value: date | datetime | int | float) -> Q:
-        return Q(**{f"{self.resolve_property(prop)}__lt": value})
+        return Q(**{f"{self.resolve_property(prop)}__lt": self.convert_value(prop, value)})
 
     def apply_gte(self, prop: str, value: date | datetime | int | float) -> Q:
-        return Q(**{f"{self.resolve_property(prop)}__gte": value})
+        return Q(**{f"{self.resolve_property(prop)}__gte": self.convert_value(prop, value)})
 
     def apply_lte(self, prop: str, value: date | datetime | int | float) -> Q:
-        return Q(**{f"{self.resolve_property(prop)}__lte": value})
+        return Q(**{f"{self.resolve_property(prop)}__lte": self.convert_value(prop, value)})
 
     def apply_in(self, prop: str, value: Sequence[str] | Sequence[float] | Sequence[int]) -> Q:
-        return Q(**{f"{self.resolve_property(prop)}__in": value})
+        values = [self.convert_value(prop, item) for item in value]
+        return Q(**{f"{self.resolve_property(prop)}__in": values})
 
     def apply_out(self, prop: str, value: Sequence[str] | Sequence[float] | Sequence[int]) -> Q:
-        return ~Q(**{f"{self.resolve_property(prop)}__in": value})
+        values = [self.convert_value(prop, item) for item in value]
+        return ~Q(**{f"{self.resolve_property(prop)}__in": values})
 
     def apply_like(self, prop: str, value: str) -> Q:
         return self.apply_pattern(prop, value, case_insensitive=False)

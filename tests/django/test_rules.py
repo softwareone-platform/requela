@@ -1,13 +1,13 @@
 from datetime import date, datetime
 
 import pytest
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, QuerySet
 
 from requela.dataclasses import Operator
 from requela.exceptions import RequelaError
 from requela.rules import FieldRule, ModelRQLRules
 from tests.django.models import Account, User
-from tests.django.rules import AccountWithAliasedUsersRules, UserRules
+from tests.django.rules import AccountWithAliasedUsersRules, UserRules, UserWithConvertersRules
 from tests.django.utils import assert_statements_equal
 
 
@@ -121,4 +121,25 @@ def test_any_on_aliased_relationship_filters_on_the_relationship() -> None:
     expected = Account.objects.filter(
         Exists(User.objects.filter(account=OuterRef("pk")).filter(name="John"))
     )
+    assert_statements_equal(stmt, expected)
+
+
+@pytest.mark.parametrize(
+    ("query_string", "expected"),
+    [
+        ("eq(name,john)", User.objects.filter(name="JOHN")),
+        ("ne(name,john)", User.objects.exclude(name="JOHN")),
+        ("gt(age,2)", User.objects.filter(age__gt=24)),
+        ("gte(age,2)", User.objects.filter(age__gte=24)),
+        ("lt(age,2)", User.objects.filter(age__lt=24)),
+        ("lte(age,2)", User.objects.filter(age__lte=24)),
+        ("in(name,(john,jane))", User.objects.filter(name__in=["JOHN", "JANE"])),
+        ("out(name,(john,jane))", User.objects.exclude(name__in=["JOHN", "JANE"])),
+        ("eq(name,null())", User.objects.filter(name__isnull=True)),
+        ("like(name,jo*)", User.objects.filter(name__startswith="jo")),
+    ],
+)
+def test_value_converter_converts_filter_values(query_string: str, expected: QuerySet) -> None:
+    """`value_converter` converts compared values, but not `null()` or `like` patterns."""
+    stmt = UserWithConvertersRules().build_query(query_string)
     assert_statements_equal(stmt, expected)
